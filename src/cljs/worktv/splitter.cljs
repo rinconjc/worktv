@@ -15,14 +15,14 @@
        :pane2 {:left css-pos}
        :css-class "split-panes horizontal"})))
 
-(defn splitter [{:keys [orientation min-size split-at on-resize]
-                 :or {split-at "50%" min-size [0 0]}} pane1 pane2]
+(defn splitter [{:keys [orientation min-size split-at]
+                 :or {split-at "50%" min-size [0 0]} :as model} pane1 pane2 on-change]
   (let [elem (atom nil)
         styles (atom (splitter-attrs orientation split-at))
         update-pos (fn [full-size pos]
                      (when-not (or (< pos (min-size 0)) (< (- full-size pos) (min-size 1)))
                        ;; (reset! styles (splitter-attrs orientation pos))
-                       (on-resize pos)))
+                       (on-change (assoc model :split-at pos))))
         mouse-move (fn[e]
                      (when-let [bounds (and @elem (-> @elem .getBoundingClientRect))]
                        (if (= :vertical orientation)
@@ -34,17 +34,17 @@
 
     (.addEventListener js/document "mouseup" #(reset! elem nil))
 
-    (fn[{:keys [orientation min-size split-at on-resize]
-         :or {split-at "50%" min-size [0 0]}} pane1 pane2]
-      [:div {:class (:css-class @styles) :on-mouse-move (if (fn? on-resize) mouse-move)}
+    (fn[{:keys [orientation min-size split-at]
+         :or {split-at "50%" min-size [0 0]}} pane1 pane2 on-change]
+      [:div {:class (:css-class @styles) :on-mouse-move mouse-move}
        [:div {:class "split-pane1" :style (:pane1 @styles)} pane1]
        [:div {:class "split-handler" :style (:handler @styles)
               :on-mouse-down (fn[e] (reset! elem (-> e .-target .-parentElement))
                                (.preventDefault e))}]
        [:div {:class "split-pane2" :style (:pane2 @styles)} pane2]])))
 
-(defn vertical-splitter [opts pane1 pane2]
-  [splitter (assoc opts :orientation :vertical) pane1 pane2])
+;; (defn vertical-splitter [opts pane1 pane2]
+;;   [splitter (assoc opts :orientation :vertical) pane1 pane2])
 
-(defn horizontal-splitter [opts pane1 pane2]
-  [splitter (assoc opts :orientation :horizontal) pane1 pane2])
+;; (defn horizontal-splitter [opts pane1 pane2]
+;;   [splitter (assoc opts :orientation :horizontal) pane1 pane2])

@@ -1,9 +1,9 @@
 (ns worktv.core
-  (:require [reagent.core :as reagent :refer [atom]]
+  (:require [accountant.core :as accountant]
+            [reagent.core :as reagent :refer [atom]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
-            [accountant.core :as accountant]
-            [worktv.layout :refer [layout-view]]))
+            [worktv.layout :refer [delete-pane layout-editor split-pane]]))
 
 ;; -------------------------
 ;; Views
@@ -35,7 +35,7 @@
       [:div.container-fluid.fill
        [:div.row-fluid.fill
         [:div.col-md-2.fill
-         [:h2 "TeamTV Designer"]
+         [:h2 "Dashboard Designer"]
          [:div.panel.panel-default
           [:div.panel-heading "Widgets"]
           [:div.list-group
@@ -53,11 +53,17 @@
             [:input.form-control {:value (:screen @model)
                                   :on-change #(swap! model assoc :screen (-> % .-target .-value))}]
             [:div.btn-group
-             [:button.btn.btn-default {:title "Split pane vertically"}
-              [:i.fa.fa-columns.fa-fw] "Vertical"]
-             [:button.btn.btn-default {:title "Split pane horizontally"}
-              [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Horizontal"]
-             [:button.btn.btn-default {:title "Delete selected pane"}
+
+             [:button.btn.btn-default
+              {:on-click #(split-pane :vertical) :title "Split pane vertically"}
+              [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]
+
+             [:button.btn.btn-default
+              {:on-click #(split-pane :horizontal) :title "Split pane horizontally"}
+              [:i.fa.fa-columns.fa-fw] "Horizontal"]
+
+             [:button.btn.btn-default
+              {:on-click #(delete-pane) :title "Delete selected pane"}
               [:i.fa.fa-trash.fa-fw] "Delete"]]
             [:div.btn-group
              [:button.btn.btn-default {:title "New Project"}
@@ -67,8 +73,8 @@
              [:button.btn.btn-default {:title "Preview Project"}
               [:i.glyphicon-glyphicon-facetime-video] "Preview"]]]]]
          [:div.row.fill {:style {:padding-bottom "60px"}}
-          [:div.col-md-12.fill {:style {:background-color "#999"}}
-           [:div#layoutBox.fill {:style {:padding "5px"}}
+          [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
+           [:div#layoutBox.fill
             [layout-editor (:layout @model) #(swap! model assoc :layout %)]]]]]]])))
 
 (defn about-page []

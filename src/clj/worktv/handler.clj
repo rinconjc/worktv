@@ -6,7 +6,7 @@
             [config.core :refer [env]]))
 
 (def mount-target
-  [:div#app {:style {:padding "0px" :margin "0px" :height "100%"}}
+  [:div#app.fill
       [:h3 "ClojureScript has not been compiled!"]
       [:p "please run "
        [:b "lein figwheel"]
@@ -20,6 +20,7 @@
    (include-css (if (env :dev) "/css/site.css" "/css/site.min.css"))
    (include-css (if (env :dev) "/css/splitter.css" "/css/splitter.min.css"))
    (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css")
+   (include-css "//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
    (include-js "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")])
 
