@@ -4,6 +4,7 @@
 ;;
 
 (defn- splitter-attrs [orientation pos]
+  (js/console.log "spplitter-attrs was called with " pos)
   (let [css-pos (if (string? pos) pos (str pos "px"))]
     (if (= orientation :vertical)
       {:handler {:top css-pos}
@@ -21,7 +22,7 @@
         styles (atom (splitter-attrs orientation split-at))
         update-pos (fn [full-size pos]
                      (when-not (or (< pos (min-size 0)) (< (- full-size pos) (min-size 1)))
-                       ;; (reset! styles (splitter-attrs orientation pos))
+                       (reset! styles (splitter-attrs orientation pos))
                        (on-change (assoc model :split-at pos))))
         mouse-move (fn[e]
                      (when-let [bounds (and @elem (-> @elem .getBoundingClientRect))]
@@ -36,6 +37,7 @@
 
     (fn[{:keys [orientation min-size split-at]
          :or {split-at "50%" min-size [0 0]}} pane1 pane2 on-change]
+      (js/console.log "rendering split-at " split-at)
       [:div {:class (:css-class @styles) :on-mouse-move mouse-move}
        [:div {:class "split-pane1" :style (:pane1 @styles)} pane1]
        [:div {:class "split-handler" :style (:handler @styles)

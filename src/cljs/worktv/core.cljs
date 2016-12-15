@@ -39,11 +39,11 @@
          [:div.panel.panel-default
           [:div.panel-heading "Widgets"]
           [:div.list-group
-           [:button.list-group-item "Image"]
-           [:button.list-group-item "Video"]
-           [:button.list-group-item "Table"]
-           [:button.list-group-item "Chart"]
-           [:button.list-group-item "Slide"]]]]
+           [:button.list-group-item {:draggable true :on-drag-start #()} "Image"]
+           [:button.list-group-item {:draggable true} "Video"]
+           [:button.list-group-item {:draggable true} "Table"]
+           [:button.list-group-item {:draggable true} "Chart"]
+           [:button.list-group-item {:draggable true} "Slide"]]]]
 
         [:div.col-md-10.fill
          [:div.row
