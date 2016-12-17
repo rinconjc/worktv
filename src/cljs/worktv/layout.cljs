@@ -19,11 +19,14 @@
 (defmulti pane-view :type)
 
 (defmethod pane-view :content-pane [pane on-change]
-  [:div.fill.full {:on-click #(do
-                                (reset! selected-pane
-                                        (if (is-selected pane) nil [pane on-change]))
-                                false)
-                   :class (if (is-selected pane)  "selected-pane")}
+  [:div.fill.full
+   {:on-click #(do
+                 (reset! selected-pane (if (is-selected pane) nil [pane on-change]))
+                 false)
+    :on-dragenter #(-> .-target .-classList (.add "drag-over"))
+    :on-dragleave #(-> .-target .-classList (.remove "drag-over"))
+    :on-dragdrop #(-> .-dataTransfer (.getData "text"))
+    :class (if (is-selected pane)  "selected-pane")}
    (content-view pane on-change)])
 
 (defmethod pane-view :container-pane [{:keys [pane1 pane2] :as opts} on-change]

@@ -30,7 +30,8 @@
    [:div [:a {:href "/project"} "Design a presentation"]]])
 
 (defn design-page []
-  (let [model (atom {:layout {:type :content-pane} :screen "1280x720"})]
+  (let [model (atom {:layout {:type :content-pane} :screen "1280x720"})
+        drag-start (fn [type] #(-> % .-dataTransfer (.setData "text/plain" type)))]
     (fn []
       [:div.container-fluid.fill
        [:div.row-fluid.fill
@@ -39,11 +40,16 @@
          [:div.panel.panel-default
           [:div.panel-heading "Widgets"]
           [:div.list-group
-           [:button.list-group-item {:draggable true :on-drag-start #()} "Image"]
-           [:button.list-group-item {:draggable true} "Video"]
-           [:button.list-group-item {:draggable true} "Table"]
-           [:button.list-group-item {:draggable true} "Chart"]
-           [:button.list-group-item {:draggable true} "Slide"]]]]
+           [:button.list-group-item
+            {:draggable true :on-dragstart (drag-start :image)} "Image"]
+           [:button.list-group-item
+            {:draggable true :on-dragstart (drag-start :video)} "Video"]
+           [:button.list-group-item
+            {:draggable true :on-dragstart (drag-start :table)} "Table"]
+           [:button.list-group-item
+            {:draggable true :on-dragstart (drag-start :chart)} "Chart"]
+           [:button.list-group-item
+            {:draggable true :on-dragstart (drag-start :slide)} "Slide"]]]]
 
         [:div.col-md-10.fill
          [:div.row
