@@ -87,3 +87,6 @@
     border: 2px dashed #00E !important;
 }
 
+.drag-over {
+  border: 2px dashed #0A0 !important;
+}
