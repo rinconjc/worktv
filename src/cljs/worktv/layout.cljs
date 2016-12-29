@@ -1,15 +1,16 @@
 (ns worktv.layout
-  (:require [reagent.core :refer [atom track]]
+  (:require [reagent.core :refer [atom cursor]]
             [reagent.session :as session]
             [worktv.splitter :refer [splitter]]))
 
 ;; (s/def ::pane-type )
 ;; (s/def ::pane (s/keys :req [::pane-type]))
-;; layout = id->pane
+;; layout = {id pane}
 ;; pane = content-pane | container-pane
 ;; content-pane = content-type src attrs
 ;; container-pane = {:pane1 p1 :pane2 p2}
-;; 1-> 11 12 -> 111 112, 121 122
+;; slide = pane+ loop delay; {:slides [{1 {:id 1 ...} 11 {:id 11 ...}}]}
+;; 1-> 11 12 -> 111 112, 121 122; 1,2,3; 2->21 22, 211 212
 (def content-types [{:type :image :label "Image"}
                     {:type :video :label "Video"}
                     {:type :badges :label "Badges"}
@@ -51,7 +52,6 @@
     ]])
 
 (defn show-editor [model]
-  (js/console.log "showing editor for " model)
   (reset! modal
           [:div.modal-dialog
            (content-editor model)]))
@@ -60,7 +60,7 @@
 
 (defmulti pane-view :type)
 
-(defmethod pane-view :content-pane [pane]
+(defmethod pane-view :content-pane [pane layout]
   [:div.fill.full
    {:on-click #(do
                  (reset! selected-pane-id (if (is-selected pane) nil (:id pane)))
@@ -88,13 +88,13 @@
 (defmethod content-view :default [pane]
   [:div.fill "blank content"])
 
-(defn layout-editor []
+(defn layout-editor [layout]
   [:div.fill.full
    (if @alert [:div.alert.alert-fixed.alert-dismissible {:class (str "alert-" (first @alert))}
                [:button.close {:on-click #(reset! alert nil) :aria-label "Close"}
                 [:span {:aria-hidden true} "×"]] (second @alert)])
    @modal
-   (pane-view (pane-by-id 1))])
+   (pane-view (get @layout 1) layout)])
 
 (defn split-pane [orientation]
   (if-let [pane (selected-pane)]
@@ -177,4 +177,4 @@
         [:div.row.fill {:style {:padding-bottom "60px"}}
          [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
           [:div#layoutBox.fill
-           [layout-editor]]]]]])))
+           [layout-editor (cursor current-session [:layout])]]]]]])))
