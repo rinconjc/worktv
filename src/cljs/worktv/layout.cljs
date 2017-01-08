@@ -1,7 +1,10 @@
 (ns worktv.layout
-  (:require [reagent.core :refer [atom track]]
+  (:require [ajax.core :refer [GET]]
+            [reagent.core :refer [atom track]]
             [reagent.session :as session]
-            [worktv.splitter :refer [splitter]]))
+            [worktv.splitter :refer [splitter]]
+            [cljstache.core :refer [render]]
+            [cljsjs.mustache]))
 
 ;; (s/def ::pane-type )
 ;; (s/def ::pane (s/keys :req [::pane-type]))
@@ -12,8 +15,7 @@
 ;; 1-> 11 12 -> 111 112, 121 122
 (def content-types [{:type :image :label "Image"}
                     {:type :video :label "Video"}
-                    {:type :badges :label "Badges"}
-                    {:type :table :label "Table"}
+                    {:type :custom :label "Custom"}
                     {:type :chart :label "Chart"}
                     {:type :slide :label "Slide"}])
 
@@ -23,12 +25,17 @@
       (session/put! :current-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"}))
     model))
 
-(defn pane-by-id [id]
-  (-> @current-design :layout (get id)))
-
 (def selected-pane-id (atom nil))
 (def alert (atom nil))
 (def modal (atom nil))
+
+(defn data-from [url refresh-rate]
+  (let [data (atom nil)]
+    (GET url :handler #(reset! data %) :error-handler #(js/console.log "failed retrieving " url (clj->js %)))
+    data))
+
+(defn pane-by-id [id]
+  (-> @current-design :layout (get id)))
 
 (defn selected-pane []
   (if @selected-pane-id (-> @current-design :layout (get @selected-pane-id))))
@@ -37,24 +44,64 @@
   (= (:id pane) @selected-pane-id))
 
 (defn update-pane [pane]
-  (swap! current-design update :layout assoc (:id pane) pane))
+  (swap! current-design update :layout assoc (:id pane) pane)
+  pane)
 
 (defmulti content-editor :content-type)
 
 (defmethod content-editor :image [pane]
   [:div.form
-   [:div.form-control
-    [:label.control-label "URL"]
+   [:div.form-group
+    [:label {:for "title"} "Title"]
     [:input.form-control
-     {:value (:src pane) :on-change #(update-pane (assoc pane :src (-> % .-target .-value)))}]]
-   [:div.form-control
-    ]])
+     {:defaultValue (:title pane) :id "title" :placeholder "Optional Title"
+      :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]]
+   [:div.form-group
+    [:label {:for "url"} "URL"]
+    [:input.form-control
+     {:defaultValue (:url pane) :id "url" :placeholder "Image URL"
+      :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]]
+   [:div.form-group
+    [:label {:for "display"} "Display"]
+    [:select.form-control
+     {:id "display"
+      :defaultValue (:display pane)
+      :on-change #(update-pane (assoc pane :display (-> % .-target .-value)))}
+     [:option {:value "fit-full"} "Fill"]
+     [:option {:value "clipped"} "Clip"]]]])
+
+(defmethod content-editor :custom [pane]
+  [:div.form
+   [:div.form-group
+    [:label {:for "title"} "Title"]
+    [:input.form-control
+     {:defaultValue (:title pane) :id "title" :placeholder "Optional Title"
+      :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]]
+   [:div.form-group
+    [:label {:for "url"} "Data URL"]
+    [:input.form-control
+     {:defaultValue (:url pane) :id "url" :placeholder "URL of data"
+      :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]]
+   [:div.form-group
+    [:label {:for "template"} "HTML Template"]
+    [:textarea.form-control
+     {:defaultValue (:template pane) :id "template" :placeholder "mustache template"
+      :rows 10
+      :on-change #(update-pane (assoc pane :template (-> % .-target .-value)))}]]])
+
+(defn editor-dialog [pane-id]
+  (let [model (track pane-by-id pane-id)]
+    [:div.modal {:style {:display "block"} :tabIndex -1}
+     [:div.modal-dialog
+      [:div.modal-content
+       [:div.modal-header [:h4 "Pane Content"]]
+       [:div.modal-body
+        (content-editor @model)]
+       [:div.modal-footer
+        [:button.btn {:on-click #(reset! modal nil)} "Close"]]]]]))
 
 (defn show-editor [model]
-  (js/console.log "showing editor for " model)
-  (reset! modal
-          [:div.modal-dialog
-           (content-editor model)]))
+  (reset! modal [editor-dialog (:id model)]))
 
 (defmulti content-view :content-type)
 
@@ -65,10 +112,14 @@
    {:on-click #(do
                  (reset! selected-pane-id (if (is-selected pane) nil (:id pane)))
                  false)
+    :on-drag-over #(.preventDefault %)
     :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
     :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
-    :on-drag-end #(js/console.log "drag ended...")
-    :on-drop #(js/console.log "dropped") ;; #(show-editor (assoc pane :content-type (-> % .-dataTransfer (.getData "text") keyword)) on-change)
+    :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
+    :on-drop #(do
+                (js/console.log "type:" (-> % .-dataTransfer (.getData "text/plain")))
+                (show-editor
+                 (update-pane (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))))
     :class (if (is-selected pane)  "selected-pane")}
    (content-view pane)])
 
@@ -77,13 +128,29 @@
    (pane-view (pane-by-id pane1))
    (pane-view (pane-by-id pane2)) update-pane])
 
-(defmethod content-view :image [{:keys [url fill? title]}]
-  [:div
+(defmethod content-view :image [{:keys [url display title]}]
+  [:div.full.fill
    (if title [:h4.top-relative title])
-   [:img {:src url :class (if fill? "fill" "")}]])
+   [:img.fit {:src url :class display}]])
 
 (defmethod content-view :video [{:keys [url fill? title]}]
   [:video {:src url :class (if fill? "fill" "")}])
+
+(defn data-view [url template]
+  (let [data (atom nil)
+        last-url (atom url)]
+    (fn [url template]
+      (when-not (and @data (= @last-url url))
+        (GET url :handler #(reset! data %)
+             :error-handler #(js/console.log "failed fetching " url ";" %))
+        (reset! last-url url))
+      [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
+                 {:__html (js/Mustache.render template (clj->js @data))}}])))
+
+(defmethod content-view :custom [{:keys [url template title]}]
+  (if (and url template)
+    [data-view url template]
+    [:div.fit "Missing url and/or template"]))
 
 (defmethod content-view :default [pane]
   [:div.fill "blank content"])
@@ -118,6 +185,15 @@
       (reset! selected-pane-id nil))
     (reset! alert ["danger" "Please select the pane to split first"])))
 
+(defn save-project []
+  (let [data (str "data:application/octet-stream,"
+                  (-> @current-design clj->js (js/window.JSON.stringify) (js/window.encodeURIComponent)))]
+    (js/console.log "data:" data)
+    (js/window.open data "dashboard-project")))
+
+(defn open-project []
+  )
+
 (defn design-page []
   (let [drag-start (fn [type] #(-> % .-dataTransfer (.setData "text/plain" type)))]
     (fn []
@@ -131,7 +207,7 @@
            (for [{:keys [type label]} content-types]
              ^{:key type}
              [:button.list-group-item
-              {:draggable true :on-drag-start (drag-start type)} label]))]]
+              {:draggable true :on-drag-start (drag-start (name type))} label]))]]
 
         (if-let [pane (selected-pane)]
           [:div.panel.panel-default
@@ -170,7 +246,7 @@
            [:div.btn-group
             [:button.btn.btn-default {:title "New Project"}
              [:i.glyphicon.glyphicon-file] "New"]
-            [:button.btn.btn-default {:title "Save Project"}
+            [:button.btn.btn-default {:title "Save Project" :on-click save-project}
              [:i.glyphicon.glyphicon-save] "Save"]
             [:button.btn.btn-default {:title "Preview Project"}
              [:i.glyphicon-glyphicon-facetime-video] "Preview"]]]]]
