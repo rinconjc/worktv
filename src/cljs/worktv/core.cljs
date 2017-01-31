@@ -1,9 +1,13 @@
 (ns worktv.core
   (:require [accountant.core :as accountant]
-            [reagent.core :as reagent]
+            [clojure.core.async :refer [<!]]
+            [commons-ui.core :as c]
+            [reagent.core :as reagent :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
-            [worktv.layout :refer [design-page]]))
+            [worktv.backend :as b]
+            [worktv.layout :refer [design-page]])
+  (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;; -------------------------
 ;; Views
@@ -33,6 +37,26 @@
   [:div [:h2 "About worktv"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
+(defn login-page []
+  (with-let [login (atom nil)
+             error (atom nil)]
+    [:div.row
+     [:div.col-md-3.col-md-offset-4
+      [:h2 "Login"]
+      @error
+      [:form.form
+       {:on-submit #(do  (.preventDefault %)
+                         (go
+                           (let [[user, err] (<! (b/login (:username @login) (:password @login)))]
+                             (if err
+                               (reset! error [c/alert "danger" err])
+                               (do
+                                 (session/put! :user user)
+                                 (accountant/dispatch-current!))))))}
+       [c/input {:type "text" :label "Email:" :model [login :username]}]
+       [c/input {:type "password" :label "Password:" :model [login :password]}]
+       [:button.btn.btn-primary "Login"]]]]))
+
 (defn current-page []
   [:div.container-fluid.fill
    ;; [menu-bar]
@@ -46,6 +70,9 @@
 
 (secretary/defroute "/project" []
   (session/put! :current-page #'design-page))
+
+(secretary/defroute "/login" []
+  (session/put! :current-page #'login-page))
 
 (secretary/defroute "/about" []
   (session/put! :current-page #'about-page))
@@ -64,5 +91,7 @@
     :path-exists?
     (fn [path]
       (secretary/locate-route path))})
-  (accountant/dispatch-current!)
+  (if-not (session/get :user)
+    (secretary/dispatch! "/login")
+    (accountant/dispatch-current!))
   (mount-root))

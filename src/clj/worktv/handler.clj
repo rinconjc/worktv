@@ -1,9 +1,13 @@
 (ns worktv.handler
-  (:require [compojure.core :refer [GET defroutes]]
-            [compojure.route :refer [not-found resources]]
-            [hiccup.page :refer [include-js include-css html5]]
-            [worktv.middleware :refer [wrap-middleware]]
-            [config.core :refer [env]]))
+  (:require [compojure
+             [core :refer [context defroutes GET POST]]
+             [route :refer [not-found resources]]]
+            [config.core :refer [env]]
+            [hiccup.page :refer [html5 include-css include-js]]
+            [ring.middleware
+             [anti-forgery :refer [*anti-forgery-token*]]
+             [json :refer [wrap-json-body]]]
+            [worktv.middleware :refer [wrap-middleware]]))
 
 (def mount-target
   [:div#app.fill
@@ -23,6 +27,9 @@
    (include-css "//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
    (include-js "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")
+   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-app.js")
+   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
+   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
    ])
 
 
@@ -33,11 +40,18 @@
     mount-target
     (include-js "/js/app.js")]))
 
+(defn wrap-csrf-cookie [handler]
+  (fn [request]
+    (update (handler request) :cookies assoc :csrf-token {:value *anti-forgery-token*})))
 
 (defroutes routes
-  (GET "/" [] (loading-page))
-  (GET "/project" [] (loading-page))
-  (GET "/about" [] (loading-page))
+  (wrap-csrf-cookie
+   (context "/" []
+            (GET "/*" [] (loading-page))))
+  (wrap-json-body
+   (context "/api" []
+            (POST "/project" [req]
+                  (println "req:" (-> req :body)))))
 
   (resources "/")
   (not-found "Not Found"))

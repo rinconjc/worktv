@@ -19,11 +19,13 @@
                  [venantius/accountant "0.1.7"
                   :exclusions [org.clojure/tools.reader]]
                  [cljs-ajax "0.5.8"]
-                 [cljstache "2.0.0"]
-                 [cljsjs/mustache "2.2.1-0"]]
+                 [cljsjs/mustache "2.2.1-0"]
+                 [commons-ui "0.1.0-SNAPSHOT"]
+                 [org.clojure/core.async "0.2.395"]
+                 [ring/ring-json "0.4.0"]]
 
   :plugins [[lein-environ "1.0.2"]
-            [lein-cljsbuild "1.1.1"]
+            [lein-cljsbuild "1.1.5"]
             [lein-asset-minifier "0.2.7"
              :exclusions [org.clojure/clojure]]]
 

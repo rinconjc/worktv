@@ -1,11 +1,16 @@
 (ns worktv.layout
   (:require [ajax.core :refer [GET]]
-            [reagent.core :refer [atom track]]
+            [cljs.core.async :refer [<! chan]]
+            [cljs.reader :refer [read-string]]
+            [commons-ui.core :as c]
+            [reagent.core :as r :refer [atom track] :refer-macros [with-let]]
             [reagent.session :as session]
+            [worktv.backend :as b]
             [worktv.splitter :refer [splitter]]
-            [cljstache.core :refer [render]]
-            [cljsjs.mustache]))
+            [worktv.views :refer [modal modal-dialog save-form search-project-form]])
+  (:require-macros [cljs.core.async.macros :refer [go]]))
 
+(defn visit [x f] (f x) x)
 ;; (s/def ::pane-type )
 ;; (s/def ::pane (s/keys :req [::pane-type]))
 ;; layout = id->pane
@@ -27,7 +32,6 @@
 
 (def selected-pane-id (atom nil))
 (def alert (atom nil))
-(def modal (atom nil))
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -157,9 +161,7 @@
 
 (defn layout-editor []
   [:div.fill.full
-   (if @alert [:div.alert.alert-fixed.alert-dismissible {:class (str "alert-" (first @alert))}
-               [:button.close {:on-click #(reset! alert nil) :aria-label "Close"}
-                [:span {:aria-hidden true} "×"]] (second @alert)])
+   @alert
    @modal
    (pane-view (pane-by-id 1))])
 
@@ -173,7 +175,8 @@
              pane1-id {:id pane1-id :type :content-pane}
              pane2-id {:id pane2-id :type :content-pane})
       (reset! selected-pane-id nil))
-    (reset! alert ["danger" "Please select the pane to split first"])))
+    (reset! alert [c/alert {:type "danger"}
+                   "Please select the pane to split first"])))
 
 (defn delete-pane []
   (if-let [pane-id @selected-pane-id]
@@ -185,14 +188,43 @@
       (reset! selected-pane-id nil))
     (reset! alert ["danger" "Please select the pane to split first"])))
 
-(defn save-project []
-  (let [data (str "data:application/octet-stream,"
-                  (-> @current-design clj->js (js/window.JSON.stringify) (js/window.encodeURIComponent)))]
-    (js/console.log "data:" data)
-    (js/window.open data "dashboard-project")))
+(defn save-project [form]
+  (let [ch (chan)]
+    (go (let [result (<! (b/save-project
+                          (-> @current-design (update :layout pr-str)
+                              (merge form))))]
+          (when-not (:error result)
+            (swap! current-design assoc :id result)
+            (reset! alert [c/alert {:type "success" :fade-after 5} "Project saved"]))
+          (>! ch result)))
+    ch))
 
-(defn open-project []
-  )
+(defn handle-save-project []
+  (if (:id @current-design) (save-project nil)
+      (reset! modal (with-let [form (atom {})]
+                      [modal-dialog {:title "Save Design..." :ok-fn #(save-project @form)}
+                       [save-form form]]))))
+
+(defn open-project [[key selected]]
+  (let [ch (chan)]
+    (go
+      (if-not selected (>! ch {:error "Select a project!"})
+              (do
+                (reset! current-design
+                        (-> selected
+                            (js->clj :keywordize-keys true)
+                            (update :layout read-string)
+                            (assoc :id key)))
+                (>! ch :ok))))
+    ch))
+
+(defn handle-open-project []
+  (go
+    (let [projs (<! (b/find-projects (.-uid (session/get :user))))
+          selection (atom nil)]
+      (reset! modal [modal-dialog {:title "Open a design..."
+                                   :ok-fn #(open-project @selection)}
+                     [search-project-form projs selection]]))))
 
 (defn design-page []
   (let [drag-start (fn [type] #(-> % .-dataTransfer (.setData "text/plain" type)))]
@@ -222,7 +254,6 @@
                 ^{:key type}[:option {:value type} label])) ]
             [:button.btn {:on-click #(show-editor pane)}
              "..."]]])]
-
        [:div.col-md-10.fill
         [:div.row
          [:div.col-md12.fill {:style {:padding "10px"}}
@@ -244,9 +275,11 @@
              {:on-click #(delete-pane) :title "Delete selected pane"}
              [:i.fa.fa-trash.fa-fw] "Delete"]]
            [:div.btn-group
+            [:button.btn.btn-default {:title "Open Project" :on-click handle-open-project}
+             [:i.glyphicon.glyphicon-open] "Open"]
             [:button.btn.btn-default {:title "New Project"}
              [:i.glyphicon.glyphicon-file] "New"]
-            [:button.btn.btn-default {:title "Save Project" :on-click save-project}
+            [:button.btn.btn-default {:title "Save Project" :on-click handle-save-project}
              [:i.glyphicon.glyphicon-save] "Save"]
             [:button.btn.btn-default {:title "Preview Project"}
              [:i.glyphicon-glyphicon-facetime-video] "Preview"]]]]]
