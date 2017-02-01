@@ -7,7 +7,8 @@
             [reagent.session :as session]
             [worktv.backend :as b]
             [worktv.splitter :refer [splitter]]
-            [worktv.views :refer [modal modal-dialog save-form search-project-form]])
+            [worktv.views :refer [modal modal-dialog save-form search-project-form]]
+            [cljsjs.mustache])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn visit [x f] (f x) x)
@@ -24,10 +25,12 @@
                     {:type :chart :label "Chart"}
                     {:type :slide :label "Slide"}])
 
+(def blank-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"})
+
 (def current-design
   (let [model (session/cursor [:current-design])]
     (when-not @model
-      (session/put! :current-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"}))
+      (session/put! :current-design blank-design))
     model))
 
 (def selected-pane-id (atom nil))
@@ -93,6 +96,13 @@
       :rows 10
       :on-change #(update-pane (assoc pane :template (-> % .-target .-value)))}]]])
 
+(defmethod content-editor :video [pane]
+  [:form.form
+   [c/input {:type "text" :label "Title" :default-value (:title pane)
+             :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]
+   [c/input {:type "text" :label "Video URL" :default-value (:url pane)
+             :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]])
+
 (defn editor-dialog [pane-id]
   (let [model (track pane-by-id pane-id)]
     [:div.modal {:style {:display "block"} :tabIndex -1}
@@ -138,7 +148,10 @@
    [:img.fit {:src url :class display}]])
 
 (defmethod content-view :video [{:keys [url fill? title]}]
-  [:video {:src url :class (if fill? "fill" "")}])
+  (if (and url (re-find #"youtube.com" url))
+    [:div.fill.full {:style {:padding "40px"}}
+     [:iframe {:frame-border 0 :src url :style {:margin "5px" :width "100%" :height "100%"}} ]]
+    [:video {:src url :class (if fill? "fill" "")}]))
 
 (defn data-view [url template]
   (let [data (atom nil)
@@ -149,7 +162,7 @@
              :error-handler #(js/console.log "failed fetching " url ";" %))
         (reset! last-url url))
       [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
-                 {:__html (js/Mustache.render template (clj->js @data))}}])))
+                 {:__html (js/Mustache.render template (clj->js (or @data "no data")))}}])))
 
 (defmethod content-view :custom [{:keys [url template title]}]
   (if (and url template)
@@ -175,8 +188,8 @@
              pane1-id {:id pane1-id :type :content-pane}
              pane2-id {:id pane2-id :type :content-pane})
       (reset! selected-pane-id nil))
-    (reset! alert [c/alert {:type "danger"}
-                   "Please select the pane to split first"])))
+    (reset! alert (c/alert {:type "danger"}
+                           "Please select the pane to split first"))))
 
 (defn delete-pane []
   (if-let [pane-id @selected-pane-id]
@@ -195,7 +208,7 @@
                               (merge form))))]
           (when-not (:error result)
             (swap! current-design assoc :id result)
-            (reset! alert [c/alert {:type "success" :fade-after 5} "Project saved"]))
+            (reset! alert (c/alert {:type "success" :fade-after 6} "Project saved")))
           (>! ch result)))
     ch))
 
@@ -277,7 +290,8 @@
            [:div.btn-group
             [:button.btn.btn-default {:title "Open Project" :on-click handle-open-project}
              [:i.glyphicon.glyphicon-open] "Open"]
-            [:button.btn.btn-default {:title "New Project"}
+            [:button.btn.btn-default {:title "New Project"
+                                      :on-click #(reset! current-design blank-design)}
              [:i.glyphicon.glyphicon-file] "New"]
             [:button.btn.btn-default {:title "Save Project" :on-click handle-save-project}
              [:i.glyphicon.glyphicon-save] "Save"]

@@ -19,7 +19,7 @@
        [:div.modal-footer
         (if (fn? ok-fn)
           [:button.btn.btn-primary {:on-click #(go (if-let [err (-> (<! (ok-fn)) :error)]
-                                                     (reset! error [c/alert "danger" err])
+                                                     (reset! error (c/alert {:type :danger} err))
                                                      (reset! modal nil)))} "OK"])
         [:button.btn {:on-click #(reset! modal nil)} "Close"]]]]]))
 
