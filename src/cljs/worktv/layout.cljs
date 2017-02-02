@@ -84,11 +84,11 @@
     [:input.form-control
      {:defaultValue (:title pane) :id "title" :placeholder "Optional Title"
       :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]]
-   [:div.form-group
-    [:label {:for "url"} "Data URL"]
-    [:input.form-control
-     {:defaultValue (:url pane) :id "url" :placeholder "URL of data"
-      :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]]
+   [c/input {:type "text" :label "Data URL" :default-value (:url pane) :placeholder "URL of data"
+             :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]
+   [c/input {:type "text" :label "Refresh Interval (secs)"
+             :default-value (:refresh-interval pane) :placeholder "60"
+             :on-change #(update-pane (assoc pane :refresh-interval (-> % .-target .-value)))}]
    [:div.form-group
     [:label {:for "template"} "HTML Template"]
     [:textarea.form-control
@@ -105,14 +105,8 @@
 
 (defn editor-dialog [pane-id]
   (let [model (track pane-by-id pane-id)]
-    [:div.modal {:style {:display "block"} :tabIndex -1}
-     [:div.modal-dialog
-      [:div.modal-content
-       [:div.modal-header [:h4 "Pane Content"]]
-       [:div.modal-body
-        (content-editor @model)]
-       [:div.modal-footer
-        [:button.btn {:on-click #(reset! modal nil)} "Close"]]]]]))
+    [modal-dialog {:title "Pane Content"}
+     (content-editor @model)]))
 
 (defn show-editor [model]
   (reset! modal [editor-dialog (:id model)]))
@@ -153,20 +147,23 @@
      [:iframe {:frame-border 0 :src url :style {:margin "5px" :width "100%" :height "100%"}} ]]
     [:video {:src url :class (if fill? "fill" "")}]))
 
-(defn data-view [url template]
+(defn data-view [url template refresh]
   (let [data (atom nil)
-        last-url (atom url)]
-    (fn [url template]
-      (when-not (and @data (= @last-url url))
-        (GET url :handler #(reset! data %)
-             :error-handler #(js/console.log "failed fetching " url ";" %))
-        (reset! last-url url))
+        last-url (atom url)
+        load (fn []
+               (GET url :handler #(reset! data %) :response-format :json
+                    :error-handler #(js/console.log "failed fetching " url ";" %))
+               (reset! last-url url))]
+    (when (and refresh (> refresh 0))
+      (js/setInterval load (* refresh 1000)))
+    (fn [url template refresh]
+      (if-not (and @data (= @last-url url)) (load))
       [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
-                 {:__html (js/Mustache.render template (clj->js (or @data "no data")))}}])))
+                 {:__html (js/Mustache.render template (visit (clj->js (or @data "no data")) js/console.log))}}])))
 
-(defmethod content-view :custom [{:keys [url template title]}]
+(defmethod content-view :custom [{:keys [url template title refresh-interval]}]
   (if (and url template)
-    [data-view url template]
+    [data-view url template refresh-interval]
     [:div.fit "Missing url and/or template"]))
 
 (defmethod content-view :default [pane]
