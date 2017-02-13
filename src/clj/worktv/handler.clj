@@ -30,6 +30,7 @@
    (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-app.js")
    (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
    (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
+   (include-js "https://www.gstatic.com/charts/loader.js")
    ])
 
 

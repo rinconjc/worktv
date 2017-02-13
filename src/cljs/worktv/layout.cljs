@@ -7,18 +7,14 @@
             [reagent.session :as session]
             [worktv.backend :as b]
             [worktv.splitter :refer [splitter]]
-            [worktv.views :refer [modal modal-dialog save-form search-project-form]]
+            [worktv.views :as v
+             :refer
+             [chart-form modal modal-dialog save-form search-project-form]]
             [cljsjs.mustache])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn visit [x f] (f x) x)
-;; (s/def ::pane-type )
-;; (s/def ::pane (s/keys :req [::pane-type]))
-;; layout = id->pane
-;; pane = content-pane | container-pane
-;; content-pane = content-type src attrs
-;; container-pane = {:pane1 p1 :pane2 p2}
-;; 1-> 11 12 -> 111 112, 121 122
+
 (def content-types [{:type :image :label "Image"}
                     {:type :video :label "Video"}
                     {:type :custom :label "Custom"}
@@ -54,59 +50,27 @@
   (swap! current-design update :layout assoc (:id pane) pane)
   pane)
 
-(defmulti content-editor :content-type)
+(defmulti content-editor (comp :content-type deref))
 
 (defmethod content-editor :image [pane]
-  [:div.form
-   [:div.form-group
-    [:label {:for "title"} "Title"]
-    [:input.form-control
-     {:defaultValue (:title pane) :id "title" :placeholder "Optional Title"
-      :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]]
-   [:div.form-group
-    [:label {:for "url"} "URL"]
-    [:input.form-control
-     {:defaultValue (:url pane) :id "url" :placeholder "Image URL"
-      :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]]
-   [:div.form-group
-    [:label {:for "display"} "Display"]
-    [:select.form-control
-     {:id "display"
-      :defaultValue (:display pane)
-      :on-change #(update-pane (assoc pane :display (-> % .-target .-value)))}
-     [:option {:value "fit-full"} "Fill"]
-     [:option {:value "clipped"} "Clip"]]]])
+  [v/image-form pane])
 
 (defmethod content-editor :custom [pane]
-  [:div.form
-   [:div.form-group
-    [:label {:for "title"} "Title"]
-    [:input.form-control
-     {:defaultValue (:title pane) :id "title" :placeholder "Optional Title"
-      :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]]
-   [c/input {:type "text" :label "Data URL" :default-value (:url pane) :placeholder "URL of data"
-             :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]
-   [c/input {:type "text" :label "Refresh Interval (secs)"
-             :default-value (:refresh-interval pane) :placeholder "60"
-             :on-change #(update-pane (assoc pane :refresh-interval (-> % .-target .-value)))}]
-   [:div.form-group
-    [:label {:for "template"} "HTML Template"]
-    [:textarea.form-control
-     {:defaultValue (:template pane) :id "template" :placeholder "mustache template"
-      :rows 10
-      :on-change #(update-pane (assoc pane :template (-> % .-target .-value)))}]]])
+  [v/custom-form pane])
 
 (defmethod content-editor :video [pane]
   [:form.form
-   [c/input {:type "text" :label "Title" :default-value (:title pane)
-             :on-change #(update-pane (assoc pane :title (-> % .-target .-value)))}]
-   [c/input {:type "text" :label "Video URL" :default-value (:url pane)
-             :on-change #(update-pane (assoc pane :url (-> % .-target .-value)))}]])
+   [c/input {:type "text" :label "Title" :model [pane :title]}]
+   [c/input {:type "text" :label "Video URL" :model [pane :url]}]])
+
+(defmethod content-editor :chart [pane]
+  [chart-form pane])
 
 (defn editor-dialog [pane-id]
-  (let [model (track pane-by-id pane-id)]
-    [modal-dialog {:title "Pane Content"}
-     (content-editor @model)]))
+  (with-let [model (atom (pane-by-id pane-id))]
+    [modal-dialog {:title (str "Edit " (-> @model :content-type name) " details")
+                   :ok-fn #(go (update-pane @model))}
+     (content-editor model)]))
 
 (defn show-editor [model]
   (reset! modal [editor-dialog (:id model)]))
@@ -120,6 +84,7 @@
    {:on-click #(do
                  (reset! selected-pane-id (if (is-selected pane) nil (:id pane)))
                  false)
+    :on-double-click #(do (.preventDefault %) (show-editor pane))
     :on-drag-over #(.preventDefault %)
     :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
     :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
@@ -148,23 +113,30 @@
     [:video {:src url :class (if fill? "fill" "")}]))
 
 (defn data-view [url template refresh]
-  (let [data (atom nil)
-        last-url (atom url)
-        load (fn []
-               (GET url :handler #(reset! data %) :response-format :json
-                    :error-handler #(js/console.log "failed fetching " url ";" %))
-               (reset! last-url url))]
-    (when (and refresh (> refresh 0))
-      (js/setInterval load (* refresh 1000)))
-    (fn [url template refresh]
-      (if-not (and @data (= @last-url url)) (load))
-      [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
-                 {:__html (js/Mustache.render template (visit (clj->js (or @data "no data")) js/console.log))}}])))
+  (with-let [data (atom nil)
+             last-url (atom url)
+             last-refresh (atom nil)
+             load (fn []
+                    (GET url :handler #(reset! data %) :response-format :json
+                         :error-handler #(js/console.log "failed fetching " url ";" %))
+                    (reset! last-url url))
+             interval-id (atom nil)]
+    (when (not= refresh @last-refresh)
+      (if @interval-id (.clearInterval js/window @interval-id))
+      (if (and refresh (> refresh 0))
+        (reset! interval-id (js/setInterval load (* refresh 1000))))
+      (reset! last-refresh refresh))
+    (if-not (and @data (= @last-url url)) (load))
+    [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
+               {:__html (js/Mustache.render template (visit (clj->js (or @data "no data")) js/console.log))}}]))
 
 (defmethod content-view :custom [{:keys [url template title refresh-interval]}]
   (if (and url template)
     [data-view url template refresh-interval]
     [:div.fit "Missing url and/or template"]))
+
+(defmethod content-view :chart [pane]
+  [v/chart-view pane])
 
 (defmethod content-view :default [pane]
   [:div.fill "blank content"])

@@ -2,12 +2,19 @@
   (:require [cljs.core.async :refer [<!]]
             [clojure.string :as str]
             [commons-ui.core :as c]
-            [reagent.core :as r :refer-macros [with-let]])
+            [reagent.core :as r :refer-macros [with-let]]
+            [cljsjs.d3])
   (:require-macros [cljs.core.async.macros :refer [go]]))
+
+
+(doto (-> js/google .-charts)
+  (.load "current" #js {:packages #js ["corechart"]})
+  (.setOnLoadCallback #(js/console.log "g chart loaded!!....")))
+
 
 (def modal (r/atom nil))
 
-(defn modal-dialog [{:keys [title ok-fn]} content]
+(defn modal-dialog [{:keys [title ok-fn close-fn]} content]
   (with-let [error (atom nil)]
     [:div.modal {:style {:display "block"} :tabIndex -1}
      [:div.modal-dialog
@@ -18,10 +25,12 @@
         content]
        [:div.modal-footer
         (if (fn? ok-fn)
-          [:button.btn.btn-primary {:on-click #(go (if-let [err (-> (<! (ok-fn)) :error)]
-                                                     (reset! error (c/alert {:type :danger} err))
-                                                     (reset! modal nil)))} "OK"])
-        [:button.btn {:on-click #(reset! modal nil)} "Close"]]]]]))
+          [:button.btn.btn-primary
+           {:on-click #(go (if-let [err (-> (<! (ok-fn)) :error)]
+                             (reset! error (c/alert {:type :danger} err))
+                             (reset! modal nil)))} "OK"])
+        [:button.btn {:on-click #(do (reset! modal nil)
+                                     (if (fn? close-fn) (close-fn)) )} "Close"]]]]]))
 
 (defn save-form [data]
   [:form.form
@@ -40,3 +49,55 @@
        ^{:key k}[:a.list-group-item {:href "#" :on-click #(reset! selection [k v])}
                  [:h4.list-group-item-heading (.-name v)]
                  [:p.list-group-item-text (.-description v)]]))]])
+
+(defn chart-form [form]
+  [:form.form
+   [c/input {:type "text" :label "Title" :model [form :title]}]
+   [c/input {:type "text" :label "Data source URL" :model [form :url]}]
+   [c/input {:type "select" :label "Chart Type" :model [form :chart-type]
+             :options [[:line "Line Chart"] [:bar "Bar Chart"] [:pie "Pie Chart"]]}]
+   [c/input {:type "text" :label "Data Path" :model [form :data-path]}]
+   [c/input {:type "text" :label "X Label" :model [form :x-label]}]
+   [c/input {:type "text" :label "X Values" :model [form :x-path]}]
+   [c/input {:type "text" :label "Y Label" :model [form :y-label]}]
+   [c/input {:type "text" :label "Y Values" :model [form :y-path]}]] )
+
+(defn image-form [form]
+  [:form.form
+   [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
+   [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL"}]
+   [c/input {:type "radio" :label "Display" :model [form :display]
+             :items {"fit-full" "Fill" "clipped" "Clip"}}]])
+(defn custom-form [form]
+  [:form.form
+   [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
+   [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"}]
+   [c/input {:type "text" :label "Refresh Interval (secs)" :model [form :refresh-interval]
+             :placeholder "60"}]
+   [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]])
+
+(defn with-node [node-fn]
+  (r/create-class
+   {:reagent-render (fn [] [:div.fill.full {:ref "chart" :width "100%" :height "100%"}])
+    :component-did-mount (fn [this] (node-fn (-> this .-refs .-chart)))}))
+
+(defn chart-view [pane]
+  [with-node
+   (fn [elem]
+     (let [gviz js/google.visualization
+           data (.arrayToDataTable gviz
+                                   (clj->js [["Year" "Sales" "Label"]
+                                             ["2000" 1000 3]
+                                             ["2001" 2000 3]
+                                             ["2002" 3000 3]
+                                             ["2003" 3200 3]
+                                             ["2004" 3100 3]]))
+           opts #js {:title "Sales" :curveType "function" :legend #js {:position "bottom"}}]
+       (.. (gviz.LineChart. elem) (draw data opts))))])
+
+
+(defn tablify [data]
+  (cond
+    (map? data) (let [[_ v] (first data)
+                      [headers fns] (if (map? v) (keys v) "$value")]
+                  (for [[k v] data] (cons k v)))))
