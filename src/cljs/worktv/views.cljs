@@ -54,9 +54,9 @@
   [:form.form
    [c/input {:type "text" :label "Title" :model [form :title]}]
    [c/input {:type "text" :label "Data source URL" :model [form :url]}]
+   [c/input {:type "text" :label "Data Path" :model [form :data-path]}]
    [c/input {:type "select" :label "Chart Type" :model [form :chart-type]
              :options [[:line "Line Chart"] [:bar "Bar Chart"] [:pie "Pie Chart"]]}]
-   [c/input {:type "text" :label "Data Path" :model [form :data-path]}]
    [c/input {:type "text" :label "X Label" :model [form :x-label]}]
    [c/input {:type "text" :label "X Values" :model [form :x-path]}]
    [c/input {:type "text" :label "Y Label" :model [form :y-label]}]
@@ -94,17 +94,3 @@
                                              ["2004" 3100 3]]))
            opts #js {:title "Sales" :curveType "function" :legend #js {:position "bottom"}}]
        (.. (gviz.LineChart. elem) (draw data opts))))])
-
-
-(defn tablify [data]
-  (cond
-    (map? data) (let [[_ v] (first data)
-                      [headers valfns] (if-let [ks (and (map? v) (keys v))]
-                                         [(cons "$key" (map name ks)) (cons first ks)]
-                                         [["$key" "$value"] [first second]])]
-                  (cons headers (map (juxt valfns) data)))
-    (coll? data) (let [x (first data)
-                       [headers valfns] (if-let [ks (and (map? v) (keys v))]
-                                          [(map name ks) ks]
-                                          [["$value"] [identity]])]
-                   (cons headers (map (juxt valfns) data)))))
