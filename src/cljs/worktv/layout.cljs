@@ -3,17 +3,18 @@
             [cljs.core.async :refer [<! chan]]
             [cljs.reader :refer [read-string]]
             [commons-ui.core :as c]
-            [reagent.core :as r :refer [atom track] :refer-macros [with-let]]
+            [reagent.core :as r :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
             [worktv.backend :as b]
             [worktv.splitter :refer [splitter]]
-            [worktv.views :as v
+            [worktv.utils :as u]
+            [worktv.views
+             :as
+             v
              :refer
              [chart-form modal modal-dialog save-form search-project-form]]
             [cljsjs.mustache])
   (:require-macros [cljs.core.async.macros :refer [go]]))
-
-(defn visit [x f] (f x) x)
 
 (def content-types [{:type :image :label "Image"}
                     {:type :video :label "Video"}
@@ -128,7 +129,7 @@
       (reset! last-refresh refresh))
     (if-not (and @data (= @last-url url)) (load))
     [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
-               {:__html (js/Mustache.render template (visit (clj->js (or @data "no data")) js/console.log))}}]))
+               {:__html (js/Mustache.render template (clj->js (or @data "no data")))}}]))
 
 (defmethod content-view :custom [{:keys [url template title refresh-interval]}]
   (if (and url template)

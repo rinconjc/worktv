@@ -3,7 +3,8 @@
             [clojure.string :as str]
             [commons-ui.core :as c]
             [reagent.core :as r :refer-macros [with-let]]
-            [cljsjs.d3])
+            [cljsjs.d3]
+            [worktv.utils :as u])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 
@@ -13,6 +14,25 @@
 
 
 (def modal (r/atom nil))
+
+(defn table-view [[headers & rows]]
+  [:table
+   [:tr
+    (doall (for [h headers] ^{:key h}[:th h]))]
+   (doall (map-indexed
+           (fn [i r] ^{:key i}[:tr (doall (for [c r] ^{:key c}[:td c]))])
+           rows))])
+
+(defn data-preview [form]
+  (with-let [content (atom nil)]
+    (if-let [[url path] (-> @form ((juxt :url :data-path))
+                            ((partial filter #(and (first %) (second %)))))]
+      (go (let [[data error] (u/visit (<! (u/fetch-data url path)) (comp clj->js js/console.log) )]
+            (js/console.log "fetched:" (clj->js data) error)
+            (if data
+             (reset! content [table-view (take 10 data)])
+             (reset! content [c/alert {:type "danger"} error])))))
+    [:div.row @content (js/console.log "rendering elem...")]))
 
 (defn modal-dialog [{:keys [title ok-fn close-fn]} content]
   (with-let [error (atom nil)]
@@ -55,8 +75,11 @@
    [c/input {:type "text" :label "Title" :model [form :title]}]
    [c/input {:type "text" :label "Data source URL" :model [form :url]}]
    [c/input {:type "text" :label "Data Path" :model [form :data-path]}]
+   [data-preview form]
    [c/input {:type "select" :label "Chart Type" :model [form :chart-type]
-             :options [[:line "Line Chart"] [:bar "Bar Chart"] [:pie "Pie Chart"]]}]
+             :options [[:line "Line Chart"]
+                       [:bar "Bar Chart"]
+                       [:pie "Pie Chart"]]}]
    [c/input {:type "text" :label "X Label" :model [form :x-label]}]
    [c/input {:type "text" :label "X Values" :model [form :x-path]}]
    [c/input {:type "text" :label "Y Label" :model [form :y-label]}]
