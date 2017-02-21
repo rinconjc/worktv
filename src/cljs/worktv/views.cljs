@@ -2,7 +2,7 @@
   (:require [cljs.core.async :refer [<!]]
             [clojure.string :as str]
             [commons-ui.core :as c]
-            [reagent.core :as r :refer-macros [with-let]]
+            [reagent.core :refer [atom] :as r :refer-macros [with-let]]
             [cljsjs.d3]
             [worktv.utils :as u])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -16,23 +16,24 @@
 (def modal (r/atom nil))
 
 (defn table-view [[headers & rows]]
-  [:table
-   [:tr
-    (doall (for [h headers] ^{:key h}[:th h]))]
-   (doall (map-indexed
-           (fn [i r] ^{:key i}[:tr (doall (for [c r] ^{:key c}[:td c]))])
-           rows))])
+  [:table.table.table-bordered
+   [:thead
+    [:tr
+     (doall (for [h headers] ^{:key h}[:th h]))]]
+   [:tbody
+    (doall
+     (map-indexed
+      (fn [i r] ^{:key i}[:tr (doall (for [c r] ^{:key c}[:td c]))])
+      rows))]])
 
-(defn data-preview [form]
-  (with-let [content (atom nil)]
-    (if-let [[url path] (-> @form ((juxt :url :data-path))
-                            ((partial filter #(and (first %) (second %)))))]
-      (go (let [[data error] (u/visit (<! (u/fetch-data url path)) (comp clj->js js/console.log) )]
-            (js/console.log "fetched:" (clj->js data) error)
+(defn generate-preview [url path]
+  (let [content (atom nil)]
+    (when (and url path)
+      (go (let [[data error] (<! (u/fetch-data url path))]
             (if data
-             (reset! content [table-view (take 10 data)])
-             (reset! content [c/alert {:type "danger"} error])))))
-    [:div.row @content (js/console.log "rendering elem...")]))
+              (reset! content [:div [:label "Data Preview"] [table-view (take 5 data)]])
+              (reset! content [c/alert {:type "danger"} (or error "unknown error")])))))
+    content))
 
 (defn modal-dialog [{:keys [title ok-fn close-fn]} content]
   (with-let [error (atom nil)]
@@ -70,20 +71,39 @@
                  [:h4.list-group-item-heading (.-name v)]
                  [:p.list-group-item-text (.-description v)]]))]])
 
+(defn y-serie-form [add-fn]
+  (with-let [form (atom {})]
+    [:tr
+     [:td [c/bare-input {:type "text" :model [form :column]}]]
+     [:td [c/bare-input {:type "text" :model [form :label]}]]
+     [:td [:button.btn
+           {:on-click #(do (add-fn (:column @form) (:label @form)) (reset! form))}
+           [:i.fa.fa-plus]]]]))
+
 (defn chart-form [form]
-  [:form.form
+  [:form.form {:on-submit #(.preventDefault %)}
    [c/input {:type "text" :label "Title" :model [form :title]}]
    [c/input {:type "text" :label "Data source URL" :model [form :url]}]
-   [c/input {:type "text" :label "Data Path" :model [form :data-path]}]
-   [data-preview form]
-   [c/input {:type "select" :label "Chart Type" :model [form :chart-type]
-             :options [[:line "Line Chart"]
-                       [:bar "Bar Chart"]
-                       [:pie "Pie Chart"]]}]
-   [c/input {:type "text" :label "X Label" :model [form :x-label]}]
-   [c/input {:type "text" :label "X Values" :model [form :x-path]}]
-   [c/input {:type "text" :label "Y Label" :model [form :y-label]}]
-   [c/input {:type "text" :label "Y Values" :model [form :y-path]}]] )
+   [:div.form.form-inline
+    [c/input {:type "text" :label "Data Path: " :model [form :data-path]}]
+    [c/input {:type "select" :label "Chart Type: " :model [form :chart-type]
+              :options [[:line "Line Chart"]
+                        [:bar "Bar Chart"]
+                        [:pie "Pie Chart"]]}]]
+   [:div.form-group @@(r/track generate-preview (:url @form) (:data-path @form))]
+   [:div.form.form-inline
+    [c/input {:type "text" :label "X Value :" :model [form :x-path]}]
+    [c/input {:type "text" :label "X Label :" :model [form :x-label]}]]
+   [:div.form-group
+    [:label "Y series"]
+    [:table.table.table-striped
+     [:thead [:tr [:th "Column"] [:th "Label"] [:th]]]
+     [:tbody (doall (for [[column label] (:y-series @form)]
+                      ^{:key column}[:tr [:td column] [:td label]
+                                     [:td [:button.btn
+                                           {:on-click #(swap! form update :y-series dissoc column)}
+                                           [:i.fa.fa-minus]]]]))
+      [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
 (defn image-form [form]
   [:form.form
@@ -104,16 +124,18 @@
    {:reagent-render (fn [] [:div.fill.full {:ref "chart" :width "100%" :height "100%"}])
     :component-did-mount (fn [this] (node-fn (-> this .-refs .-chart)))}))
 
-(defn chart-view [pane]
+(defn chart-view [{:keys [title url data-path x-path x-label y-series] :as pane}]
   [with-node
    (fn [elem]
-     (let [gviz js/google.visualization
-           data (.arrayToDataTable gviz
-                                   (clj->js [["Year" "Sales" "Label"]
-                                             ["2000" 1000 3]
-                                             ["2001" 2000 3]
-                                             ["2002" 3000 3]
-                                             ["2003" 3200 3]
-                                             ["2004" 3100 3]]))
-           opts #js {:title "Sales" :curveType "function" :legend #js {:position "bottom"}}]
-       (.. (gviz.LineChart. elem) (draw data opts))))])
+     (go
+       (let [gviz js/google.visualization
+             columns (cons x-path (keys y-series))
+             labels (cons x-label (vals y-series))
+             [data error] (<! (u/fetch-data url data-path))]
+         (if-let [data (and data
+                            (.arrayToDataTable gviz (clj->js (->> (u/tablify data columns)
+                                                                  rest (cons labels)))))]
+           (.. (gviz.LineChart. elem)
+               (draw data #js {:title title :curveType "function"
+                               :legend #js {:position "bottom"}}))
+           (js/console.log "error:" error)))))])
