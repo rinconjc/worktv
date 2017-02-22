@@ -3,10 +3,8 @@
             [clojure.string :as str]
             [commons-ui.core :as c]
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
-            [cljsjs.d3]
             [worktv.utils :as u])
   (:require-macros [cljs.core.async.macros :refer [go]]))
-
 
 (doto (-> js/google .-charts)
   (.load "current" #js {:packages #js ["corechart"]})
@@ -122,20 +120,24 @@
 (defn with-node [node-fn]
   (r/create-class
    {:reagent-render (fn [] [:div.fill.full {:ref "chart" :width "100%" :height "100%"}])
-    :component-did-mount (fn [this] (node-fn (-> this .-refs .-chart)))}))
+    :component-did-mount (fn [this] (node-fn (-> this .-refs .-chart)))
+    :should-component-update (fn [this] (node-fn (-> this .-refs .-chart)))}))
 
 (defn chart-view [{:keys [title url data-path x-path x-label y-series] :as pane}]
   [with-node
    (fn [elem]
      (go
-       (let [gviz js/google.visualization
+       (let [gviz (.-visualization js/google)
              columns (cons x-path (keys y-series))
              labels (cons x-label (vals y-series))
-             [data error] (<! (u/fetch-data url data-path))]
+             [data error] (<! (u/fetch-data url data-path columns))]
          (if-let [data (and data
-                            (.arrayToDataTable gviz (clj->js (->> (u/tablify data columns)
-                                                                  rest (cons labels)))))]
-           (.. (gviz.LineChart. elem)
+                            (.arrayToDataTable gviz (clj->js
+                                                     (->> data
+                                                          rest
+                                                          (sort-by #(nth % 0))
+                                                          (cons labels)))))]
+           (.. (js/google.visualization.LineChart. elem)
                (draw data #js {:title title :curveType "function"
                                :legend #js {:position "bottom"}}))
            (js/console.log "error:" error)))))])

@@ -7,7 +7,6 @@
 (defn visit [x f] (f x) x)
 
 (defn- headers-and-extractors [data]
-  (js/console.log "data:" (clj->js data))
   (cond
     (map? data) (let [[_ v] (first data)]
                   (if-let [ks (and (map? v) (keys v))]
@@ -28,15 +27,18 @@
   ([data columns]
    (let [[headers valfns] (headers-and-extractors data)
          [headers valfns] (if (seq? columns)
-                            [columns (map #(nth (index-of headers %) valfns) columns)]
+                            [columns (map #(nth valfns (index-of headers %)) columns)]
                             [headers valfns])]
      (cons headers (map (apply juxt valfns) data)))))
 
-(defn fetch-data [url path]
-  (let [ch (chan)]
-    (GET url :format :json :response-format :json :handler #(go (>! ch [%]))
-         :keywordize-keys true :error-handler #(go (>! ch [nil %])))
-    (go (let [[data error] (<! ch)]
-          (if data
-            [(tablify (get-in data (str/split path #"\.") ((partial map keyword))))]
-            [nil error])))))
+(defn fetch-data
+  "retrieves tablified data from the given url and json-path"
+  ([url path] (fetch-data url path nil))
+  ([url path columns]
+   (let [ch (chan)]
+     (GET url :format :json :response-format :json :handler #(go (>! ch [%]))
+          :keywordize-keys true :error-handler #(go (>! ch [nil %])))
+     (go (let [[data error] (<! ch)]
+           (if data
+             [(tablify (get-in data (str/split path #"\.") ((partial map keyword))) columns)]
+             [nil error]))))))
