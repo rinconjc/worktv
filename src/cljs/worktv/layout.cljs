@@ -213,8 +213,8 @@
   (let [drag-start (fn [type] #(-> % .-dataTransfer (.setData "text/plain" type)))]
     (fn []
       [:div.row-fluid.fill
-       [:div.col-md-2.fill
-        [:h2 "Dashboard Designer"]
+       [:div.col-md-1.fill
+        [:h2 "Dash..."]
         [:div.panel.panel-default
          [:div.panel-heading "Widgets"]
          [:div#content-nav.list-group
@@ -222,22 +222,8 @@
            (for [{:keys [type label]} content-types]
              ^{:key type}
              [:button.list-group-item
-              {:draggable true :on-drag-start (drag-start (name type))} label]))]]
-
-        (if-let [pane (selected-pane)]
-          [:div.panel.panel-default
-           [:div.panel-heading "Selected"]
-           [:div.panel-body
-            [:select.form-control
-             {:value (-> pane :content-type (or ""))
-              :on-change #(update-pane (assoc pane :content-type (-> % .-target .-value keyword)))}
-             [:option ""]
-             (doall
-              (for [{:keys [type label]} content-types]
-                ^{:key type}[:option {:value type} label])) ]
-            [:button.btn {:on-click #(show-editor pane)}
-             "..."]]])]
-       [:div.col-md-10.fill
+              {:draggable true :on-drag-start (drag-start (name type))} [:i.fa {:class label}] label]))]]]
+       [:div.col-md-11.fill
         [:div.row
          [:div.col-md12.fill {:style {:padding "10px"}}
           [:div.form-inline
