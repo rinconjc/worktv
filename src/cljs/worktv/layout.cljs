@@ -16,11 +16,10 @@
             [cljsjs.mustache])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(def content-types [{:type :image :label "Image"}
-                    {:type :video :label "Video"}
-                    {:type :custom :label "Custom"}
-                    {:type :chart :label "Chart"}
-                    {:type :slide :label "Slide"}])
+(def content-types [{:type :image :label "Image" :icon "fa-image"}
+                    {:type :video :label "Video" :icon "fa-file-video-o"}
+                    {:type :custom :label "Custom" :icon "fa-code"}
+                    {:type :chart :label "Chart" :icon "fa-bar-chart-o"}])
 
 (def blank-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"})
 
@@ -209,51 +208,59 @@
                                    :ok-fn #(open-project @selection)}
                      [search-project-form projs selection]]))))
 
+(defn menu-bar []
+  [:nav.navbar.navbar-default.navbar-fixed-top
+   [:div.container-fluid
+    [:div.navbar-header
+     [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
+                                       :aria-expanded false :aria-controls "navbar"}
+      [:span.sr-only "Toggle navigation"]
+      [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
+     [:a.navbar-brand "Dash.io"]]
+    [:navbar.navbar-collapse-collapse
+     [:ul.nav.navbar-nav
+      [:li.dropdown
+       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
+                            :aria-expanded false} "Project" [:span.caret]]
+       [:ul.dropdown-menu
+        [:li [:a {:href "#" :title "Open Project" :on-click handle-open-project}
+              [:i.glyphicon.glyphicon-open] "Open"]]
+        [:li [:a {:href "#" :title "New Project"
+                  :on-click #(reset! current-design blank-design)}
+              [:i.glyphicon.glyphicon-file] "New"]]
+        [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
+              [:i.glyphicon.glyphicon-save] "Save"]]
+        [:li [:a {:href "#" :title "Preview Project"}
+              [:i.glyphicon-glyphicon-facetime-video] "Preview"]]]]
+      [:li
+       [:div.btn-toolbar
+        [:span.navbar-text "|"]
+        [:div.btn-group
+         [:button.btn.btn-default.navbar-btn.disabled "Layout"]
+         [:button.btn.btn-default.navbar-btn
+          {:on-click #(split-pane :vertical) :title "Split pane vertically"}
+          [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]
+         [:button.btn.btn-default.navbar-btn
+          {:on-click #(split-pane :horizontal) :title "Split pane horizontally"}
+          [:i.fa.fa-columns.fa-fw] "Horizontal"]
+         [:button.btn.btn-default.navbar-btn
+          {:on-click #(delete-pane) :title "Delete selected pane"}
+          [:i.fa.fa-trash-o.fa-fw] "Delete"]]
+        [:span.navbar-text "|"]
+        [:div.btn-group
+         [:button.btn.btn-default.navbar-btn.disabled "Widgets"]
+         (doall
+          (for [{:keys [type label icon]} content-types]
+            ^{:key type}
+            [:button.btn.btn-default.navbar-btn
+             {:draggable true :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
+              :title label}
+             [:i.fa.fa {:class icon}]]))]]]]]]])
+
 (defn design-page []
-  (let [drag-start (fn [type] #(-> % .-dataTransfer (.setData "text/plain" type)))]
-    (fn []
-      [:div.row-fluid.fill
-       [:div.col-md-1.fill
-        [:h2 "Dash..."]
-        [:div.panel.panel-default
-         [:div.panel-heading "Widgets"]
-         [:div#content-nav.list-group
-          (doall
-           (for [{:keys [type label]} content-types]
-             ^{:key type}
-             [:button.list-group-item
-              {:draggable true :on-drag-start (drag-start (name type))} [:i.fa {:class label}] label]))]]]
-       [:div.col-md-11.fill
-        [:div.row
-         [:div.col-md12.fill {:style {:padding "10px"}}
-          [:div.form-inline
-           [:label.form-label "Screen size"]
-           [:input.form-control {:value (:screen @current-design)
-                                 :on-change #(swap! current-design assoc :screen (-> % .-target .-value))}]
-           [:div.btn-group
-
-            [:button.btn.btn-default
-             {:on-click #(split-pane :vertical) :title "Split pane vertically"}
-             [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]
-
-            [:button.btn.btn-default
-             {:on-click #(split-pane :horizontal) :title "Split pane horizontally"}
-             [:i.fa.fa-columns.fa-fw] "Horizontal"]
-
-            [:button.btn.btn-default
-             {:on-click #(delete-pane) :title "Delete selected pane"}
-             [:i.fa.fa-trash.fa-fw] "Delete"]]
-           [:div.btn-group
-            [:button.btn.btn-default {:title "Open Project" :on-click handle-open-project}
-             [:i.glyphicon.glyphicon-open] "Open"]
-            [:button.btn.btn-default {:title "New Project"
-                                      :on-click #(reset! current-design blank-design)}
-             [:i.glyphicon.glyphicon-file] "New"]
-            [:button.btn.btn-default {:title "Save Project" :on-click handle-save-project}
-             [:i.glyphicon.glyphicon-save] "Save"]
-            [:button.btn.btn-default {:title "Preview Project"}
-             [:i.glyphicon-glyphicon-facetime-video] "Preview"]]]]]
-        [:div.row.fill {:style {:padding-bottom "60px"}}
-         [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
-          [:div#layoutBox.fill
-           [layout-editor]]]]]])))
+  [:div.row-fluid.fill.full
+   [menu-bar]
+   [:div.row.fill {:style {:padding-bottom "40px" :padding-top "60px"}}
+    [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
+     [:div#layoutBox.fill {:style {:border "solid 1px" :border-color "#ddd"}}
+      [layout-editor]]]]])

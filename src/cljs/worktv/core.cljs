@@ -13,14 +13,14 @@
 ;; Views
 (defn menu-bar []
   [:nav.navbar.navbar-inverse.navbar-fixed-top
-   [:div.container
+   [:div.container-fluid
     [:div.navbar-header
      [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
      [:a.navbar-brand "Work TV"]]
-    [:navbar.navbar-collapse-collapse
+    [:navbar.navbar-collapse-collapse {:id "navbar"}
      [:ul.nav.navbar-nav
       [:li.dropdown
        [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
