@@ -126,18 +126,19 @@
 (defn chart-view [{:keys [title url data-path x-path x-label y-series] :as pane}]
   [with-node
    (fn [elem]
-     (go
-       (let [gviz (.-visualization js/google)
-             columns (cons x-path (keys y-series))
-             labels (cons x-label (vals y-series))
-             [data error] (<! (u/fetch-data url data-path columns))]
-         (if-let [data (and data
-                            (.arrayToDataTable gviz (clj->js
-                                                     (->> data
-                                                          rest
-                                                          (sort-by #(nth % 0))
-                                                          (cons labels)))))]
-           (.. (js/google.visualization.LineChart. elem)
-               (draw data #js {:title title :curveType "function"
-                               :legend #js {:position "bottom"}}))
-           (js/console.log "error:" error)))))])
+     (if (and url data-path)
+       (go
+         (let [gviz (.-visualization js/google)
+               columns (cons x-path (keys y-series))
+               labels (cons x-label (vals y-series))
+               [data error] (<! (u/fetch-data url data-path columns))]
+           (if-let [data (and data
+                              (.arrayToDataTable gviz (clj->js
+                                                       (->> data
+                                                            rest
+                                                            (sort-by #(nth % 0))
+                                                            (cons labels)))))]
+             (.. (js/google.visualization.LineChart. elem)
+                 (draw data #js {:title title :curveType "function"
+                                 :legend #js {:position "bottom"}}))
+             (js/console.log "error:" (clj->js error)))))))])

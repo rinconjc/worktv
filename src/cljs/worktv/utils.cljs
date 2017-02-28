@@ -18,7 +18,6 @@
                      [["$value"] [identity]]))))
 
 (defn index-of [xs x]
-  (js/console.log "searching..." x " in " (clj->js xs))
   (->> xs (keep-indexed #(if (= %2 x) %1 nil)) first))
 
 (defn tablify

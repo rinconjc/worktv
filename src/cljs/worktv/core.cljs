@@ -6,7 +6,7 @@
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [worktv.backend :as b]
-            [worktv.layout :refer [design-page]])
+            [worktv.layout :refer [design-page preview-page]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;; -------------------------
@@ -76,6 +76,9 @@
 
 (secretary/defroute "/about" []
   (session/put! :current-page #'about-page))
+
+(secretary/defroute "/preview" []
+  (session/put! :current-page #'preview-page))
 
 ;; -------------------------
 ;; Initialize app

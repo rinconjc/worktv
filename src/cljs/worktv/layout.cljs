@@ -5,9 +5,10 @@
             [commons-ui.core :as c]
             [reagent.core :as r :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
+            [secretary.core :as secretary]
             [worktv.backend :as b]
-            [worktv.splitter :refer [splitter]]
             [worktv.utils :as u]
+            [worktv.splitter :refer [splitter]]
             [worktv.views
              :as
              v
@@ -15,6 +16,8 @@
              [chart-form modal modal-dialog save-form search-project-form]]
             [cljsjs.mustache])
   (:require-macros [cljs.core.async.macros :refer [go]]))
+
+(def ^:dynamic *edit-mode* true)
 
 (def content-types [{:type :image :label "Image" :icon "fa-image"}
                     {:type :video :label "Video" :icon "fa-file-video-o"}
@@ -81,19 +84,18 @@
 
 (defmethod pane-view :content-pane [pane]
   [:div.fill.full
-   {:on-click #(do
-                 (reset! selected-pane-id (if (is-selected pane) nil (:id pane)))
-                 false)
-    :on-double-click #(do (.preventDefault %) (show-editor pane))
-    :on-drag-over #(.preventDefault %)
-    :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
-    :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
-    :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
-    :on-drop #(do
-                (js/console.log "type:" (-> % .-dataTransfer (.getData "text/plain")))
-                (show-editor
-                 (update-pane (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))))
-    :class (if (is-selected pane)  "selected-pane")}
+   (if *edit-mode*
+     {:on-click #(do
+                   (reset! selected-pane-id (if (is-selected pane) nil (:id pane)))
+                   false)
+      :on-double-click #(do (.preventDefault %) (show-editor pane))
+      :on-drag-over #(.preventDefault %)
+      :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
+      :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
+      :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
+      :on-drop #(show-editor
+                 (update-pane (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword))))
+      :class (if (is-selected pane)  "selected-pane")})
    (content-view pane)])
 
 (defmethod pane-view :container-pane [{:keys [pane1 pane2] :as opts}]
@@ -224,14 +226,14 @@
                             :aria-expanded false} "Project" [:span.caret]]
        [:ul.dropdown-menu
         [:li [:a {:href "#" :title "Open Project" :on-click handle-open-project}
-              [:i.glyphicon.glyphicon-open] "Open"]]
+              "Open"]]
         [:li [:a {:href "#" :title "New Project"
                   :on-click #(reset! current-design blank-design)}
-              [:i.glyphicon.glyphicon-file] "New"]]
+              "New"]]
         [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
-              [:i.glyphicon.glyphicon-save] "Save"]]
-        [:li [:a {:href "#" :title "Preview Project"}
-              [:i.glyphicon-glyphicon-facetime-video] "Preview"]]]]
+              "Save"]]
+        [:li [:a {:href "/preview" :title "Preview Project"}
+              "Preview"]]]]
       [:li
        [:div.btn-toolbar
         [:span.navbar-text "|"]
@@ -264,3 +266,10 @@
     [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
      [:div#layoutBox.fill {:style {:border "solid 1px" :border-color "#ddd"}}
       [layout-editor]]]]])
+
+(defn preview-page []
+  (binding [*edit-mode* false]
+    [:div.preview
+     {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
+    [:div.fill.full
+     (pane-view (pane-by-id 1))]]))
