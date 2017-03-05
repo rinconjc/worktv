@@ -36,3 +36,11 @@
                              (.forEach snapshot #(and (assoc! ps (.-key %) (.val %)) nil))
                              (>! ch (persistent! ps)))))))
     ch))
+
+;; (defn publish-project [user-key proj-key title public?]
+;;   (let [db (.database js/firebase)
+;;         ch (chan)]
+;;     (-> db (.ref (str "published/" (public? "public" user-key) "/" proj-key))
+;;         (.set (clj->js {:title title :published-on (js/Date.)}))
+;;         (.then #(go (>! ch id))))
+;;     ch))

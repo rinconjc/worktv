@@ -210,6 +210,9 @@
                                    :ok-fn #(open-project @selection)}
                      [search-project-form projs selection]]))))
 
+(defn do-publish-project []
+  )
+
 (defn menu-bar []
   [:nav.navbar.navbar-default.navbar-fixed-top
    [:div.container-fluid
@@ -218,7 +221,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dash.io"]]
+     [:a.navbar-brand "Dash.mkr"]]
     [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
       [:li.dropdown
@@ -233,7 +236,13 @@
         [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
               "Save"]]
         [:li [:a {:href "/preview" :title "Preview Project"}
-              "Preview"]]]]
+              "Preview"]]
+        [:li [:a {:href "#" :title "Publish Project" :on-click do-publish-project}
+              "Publish"]]
+        [:li [:a {:href "#" :title "Show Project"
+                  :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
+                                 (.preventDefault %))}
+              "Show"]]]]
       [:li
        [:div.btn-toolbar
         [:span.navbar-text "|"]

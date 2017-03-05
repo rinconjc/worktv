@@ -80,6 +80,11 @@
 (secretary/defroute "/preview" []
   (session/put! :current-page #'preview-page))
 
+(secretary/defroute "/show/:proj-name" [proj-name]
+  (js/console.log "showing " proj-name)
+  ;; (session/put! :current-page #'preview-page)
+  )
+
 ;; -------------------------
 ;; Initialize app
 
