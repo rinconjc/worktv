@@ -1,10 +1,11 @@
 (ns worktv.backend
-  (:require [clojure.core.async :refer [>! chan]])
+  (:require [clojure.core.async :refer [>! chan]]
+            [worktv.utils :as u])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
-                                                 :authDomain "general-155419.firebaseapp.com"
-                                                 :databaseURL "https://general-155419.firebaseio.com/"})))
+                                                :authDomain "general-155419.firebaseapp.com"
+                                                :databaseURL "https://general-155419.firebaseio.com/"})))
 (defn login [user password]
   (let [auth (.auth js/firebase)
         ch (chan)]
@@ -26,7 +27,6 @@
     ch))
 
 (defn find-projects [user-id]
-  (js/console.log "finding projecs for " user-id)
   (let [db (.database js/firebase)
         ch (chan)]
     (-> db (.ref (str "projects/public"))
@@ -37,10 +37,12 @@
                              (>! ch (persistent! ps)))))))
     ch))
 
-;; (defn publish-project [user-key proj-key title public?]
-;;   (let [db (.database js/firebase)
-;;         ch (chan)]
-;;     (-> db (.ref (str "published/" (public? "public" user-key) "/" proj-key))
-;;         (.set (clj->js {:title title :published-on (js/Date.)}))
-;;         (.then #(go (>! ch id))))
-;;     ch))
+(defn publish-project [user-key {:keys [id name folder]}]
+  (let [db (.database js/firebase)
+        path (str "published/" (if (= "public" folder) "public" user-key) "/" id)
+        ch (chan)]
+    (-> db (.ref path)
+        (.set (clj->js {:name name :date (js/Date.)}))
+        (.then #(go (>! ch [path])))
+        (.catch #(go (>! ch [nil %]))))
+    ch))

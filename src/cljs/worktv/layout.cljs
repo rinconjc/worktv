@@ -211,7 +211,11 @@
                      [search-project-form projs selection]]))))
 
 (defn do-publish-project []
-  )
+  (go
+    (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
+      (reset! alert (if result
+                      [c/alert {:type "success"} "Design published"]
+                      [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
 
 (defn menu-bar []
   [:nav.navbar.navbar-default.navbar-fixed-top
@@ -280,5 +284,5 @@
   (binding [*edit-mode* false]
     [:div.preview
      {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
-    [:div.fill.full
-     (pane-view (pane-by-id 1))]]))
+     [:div.fill.full
+      (pane-view (pane-by-id 1))]]))
