@@ -6,6 +6,7 @@
 (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
                                                 :authDomain "general-155419.firebaseapp.com"
                                                 :databaseURL "https://general-155419.firebaseio.com/"})))
+
 (defn login [user password]
   (let [auth (.auth js/firebase)
         ch (chan)]
@@ -37,12 +38,19 @@
                              (>! ch (persistent! ps)))))))
     ch))
 
+(defn get-project [path]
+  (let [db (.databases js/firebase)
+        ch (chan)]
+    (-> db (.ref (str "projects/" path))
+        (.once "value") (.then #(go (>! ch (-> % .val)))))
+    ch))
+
 (defn publish-project [user-key {:keys [id name folder]}]
   (let [db (.database js/firebase)
         path (str "published/" (if (= "public" folder) "public" user-key) "/" id)
         ch (chan)]
     (-> db (.ref path)
-        (.set (clj->js {:name name :date (js/Date.)}))
+        (.set #js {:name name :date (js/Date.)})
         (.then #(go (>! ch [path])))
         (.catch #(go (>! ch [nil %]))))
     ch))

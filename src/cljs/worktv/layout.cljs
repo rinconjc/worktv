@@ -189,25 +189,23 @@
                       [modal-dialog {:title "Save Design..." :ok-fn #(save-project @form)}
                        [save-form form]]))))
 
-(defn open-project [[key selected]]
-  (let [ch (chan)]
-    (go
-      (if-not selected (>! ch {:error "Select a project!"})
-              (do
-                (reset! current-design
-                        (-> selected
-                            (js->clj :keywordize-keys true)
-                            (update :layout read-string)
-                            (assoc :id key)))
-                (>! ch :ok))))
-    ch))
+(defn load-project
+  ([path] (go (let [[data error] (<! (b/get-project path))]
+                (if data (load-project nil data)))))
+  ([key proj-data]
+   (if-not proj-data {:error "Select a project!"}
+           (reset! current-design
+                   (-> proj-data
+                       (js->clj :keywordize-keys true)
+                       (update :layout read-string)
+                       (assoc :id key))))))
 
 (defn handle-open-project []
   (go
     (let [projs (<! (b/find-projects (.-uid (session/get :user))))
           selection (atom nil)]
       (reset! modal [modal-dialog {:title "Open a design..."
-                                   :ok-fn #(open-project @selection)}
+                                   :ok-fn #(go (apply load-project @selection))}
                      [search-project-form projs selection]]))))
 
 (defn do-publish-project []

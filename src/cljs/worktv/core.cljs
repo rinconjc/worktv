@@ -6,7 +6,7 @@
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [worktv.backend :as b]
-            [worktv.layout :refer [design-page preview-page]])
+            [worktv.layout :as l :refer [design-page preview-page]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 ;; -------------------------
@@ -80,10 +80,10 @@
 (secretary/defroute "/preview" []
   (session/put! :current-page #'preview-page))
 
-(secretary/defroute "/show/:proj-name" [proj-name]
-  (js/console.log "showing " proj-name)
-  ;; (session/put! :current-page #'preview-page)
-  )
+(secretary/defroute "/show/:folder/:proj-id/*" [folder proj-id]
+  (l/load-project (str folder "/" proj-id))
+  (session/put! :current-page #'preview-page))
+
 
 ;; -------------------------
 ;; Initialize app
