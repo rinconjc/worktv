@@ -39,10 +39,10 @@
     ch))
 
 (defn get-project [path]
-  (let [db (.databases js/firebase)
+  (let [db (.database js/firebase)
         ch (chan)]
     (-> db (.ref (str "projects/" path))
-        (.once "value") (.then #(go (>! ch (-> % .val)))))
+        (.once "value") (.then #(go (>! ch [(-> % .val)]))))
     ch))
 
 (defn publish-project [user-key {:keys [id name folder]}]

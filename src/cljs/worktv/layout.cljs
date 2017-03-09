@@ -211,12 +211,12 @@
 (defn do-publish-project []
   (go
     (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
-      (reset! alert (if result
-                      [c/alert {:type "success"} "Design published"]
-                      [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
+      (if result
+        (secretary/dispatch! (str "/show/" (:folder @current-design) "/" (:id @current-design)))
+        (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
 
 (defn menu-bar []
-  [:nav.navbar.navbar-default.navbar-fixed-top
+  [:nav.navbar.navbar-default
    [:div.container-fluid
     [:div.navbar-header
      [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
@@ -226,6 +226,7 @@
      [:a.navbar-brand "Dash.mkr"]]
     [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
+      [:li [:a {:href "/"} "Home"]]
       [:li.dropdown
        [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
                             :aria-expanded false} "Project" [:span.caret]]
@@ -239,7 +240,8 @@
               "Save"]]
         [:li [:a {:href "/preview" :title "Preview Project"}
               "Preview"]]
-        [:li [:a {:href "#" :title "Publish Project" :on-click do-publish-project}
+        [:li [:a {:href "#" :title "Publish Project"
+                  :on-click #(do (do-publish-project) (.preventDefault %))}
               "Publish"]]
         [:li [:a {:href "#" :title "Show Project"
                   :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
@@ -271,16 +273,15 @@
              [:i.fa.fa {:class icon}]]))]]]]]]])
 
 (defn design-page []
-  [:div.row-fluid.fill.full
-   [menu-bar]
-   [:div.row.fill {:style {:padding-bottom "40px" :padding-top "60px"}}
-    [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
-     [:div#layoutBox.fill {:style {:border "solid 1px" :border-color "#ddd"}}
-      [layout-editor]]]]])
+  [:div.row.fill {:style {:padding "0px 20px"}}
+   [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
+    [:div#layoutBox.fill {:style {:border "solid 1px" :border-color "#ddd"}}
+     [layout-editor]]]])
 
 (defn preview-page []
   (binding [*edit-mode* false]
-    [:div.preview
-     {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
-     [:div.fill.full
-      (pane-view (pane-by-id 1))]]))
+    (if @current-design
+      [:div.preview
+       {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
+       [:div.fill.full
+        (pane-view (pane-by-id 1))]])))

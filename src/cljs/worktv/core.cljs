@@ -12,22 +12,22 @@
 ;; -------------------------
 ;; Views
 (defn menu-bar []
-  [:nav.navbar.navbar-inverse.navbar-fixed-top
+  [:nav.navbar.navbar-default
    [:div.container-fluid
     [:div.navbar-header
      [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Work TV"]]
+     [:a.navbar-brand "Dash.mkr"]]
     [:navbar.navbar-collapse-collapse {:id "navbar"}
-     [:ul.nav.navbar-nav
-      [:li.dropdown
-       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
-                            :aria-expanded false} "Project" [:span.caret]]
-       [:ul.dropdown-menu
-        [:li [:a {:href "/project" } "New"]]
-        [:li [:a "Open..."]]]]]]]])
+     [:ul.nav.navbar-nav.navbar-left
+      (if (session/get :user)
+        [:li [:a {:href "/project"} "Design"]])]
+     [:ul.nav.navbar-nav.navbar-right
+      (if (session/get :user)
+        [:li [:a {:href "/logout"} "Logout"]]
+        [:li [:a {:href "/login"} "Login"]])]]]])
 
 (defn home-page []
   [:div [:h2 "Welcome to worktv"]
@@ -41,7 +41,7 @@
   (with-let [login (atom nil)
              error (atom nil)]
     [:div.row
-     [:div.col-md-3.col-md-offset-4
+     [:div.col-sm-3.col-sm-offset-4
       [:h2 "Login"]
       @error
       [:form.form
@@ -52,15 +52,18 @@
                                (reset! error [c/alert "danger" err])
                                (do
                                  (session/put! :user user)
-                                 (accountant/dispatch-current!))))))}
+                                 (secretary/dispatch! "/"))))))}
        [c/input {:type "text" :label "Email:" :model [login :username]}]
        [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))
 
 (defn current-page []
-  [:div.container-fluid.fill
-   ;; [menu-bar]
-   [(session/get :current-page)]])
+  (let [[page menu-bar] (as-> (session/get :current-page) p
+                          (if-not (vector? p) [p menu-bar] p))]
+    [:div.container-fluid.fill.full
+     (if menu-bar [menu-bar])
+     [:div.row-fluid.fill.full
+      [page]]]))
 
 ;; -------------------------
 ;; Routes
@@ -69,20 +72,24 @@
   (session/put! :current-page #'home-page))
 
 (secretary/defroute "/project" []
-  (session/put! :current-page #'design-page))
+  (session/put! :current-page [#'l/design-page #'l/menu-bar]))
 
 (secretary/defroute "/login" []
   (session/put! :current-page #'login-page))
+
+(secretary/defroute "/logout" []
+  (session/remove! :user)
+  (session/put! :current-page #'home-page))
 
 (secretary/defroute "/about" []
   (session/put! :current-page #'about-page))
 
 (secretary/defroute "/preview" []
-  (session/put! :current-page #'preview-page))
+  (session/put! :current-page [#'preview-page nil]))
 
-(secretary/defroute "/show/:folder/:proj-id/*" [folder proj-id]
-  (l/load-project (str folder "/" proj-id))
-  (session/put! :current-page #'preview-page))
+(secretary/defroute "/show/:folder/:proj-id" [folder proj-id]
+  (session/put! :current-page #'preview-page)
+  (l/load-project (str folder "/" proj-id)))
 
 
 ;; -------------------------
@@ -99,7 +106,5 @@
     :path-exists?
     (fn [path]
       (secretary/locate-route path))})
-  (if-not (session/get :user)
-    (secretary/dispatch! "/login")
-    (accountant/dispatch-current!))
+  (accountant/dispatch-current!)
   (mount-root))
