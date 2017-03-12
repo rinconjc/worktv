@@ -1,6 +1,8 @@
 (ns worktv.backend
   (:require [clojure.core.async :refer [>! chan]]
-            [worktv.utils :as u])
+            [worktv.utils :as u]
+            [ajax.core :refer [GET]]
+            [clojure.string :as str])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
@@ -54,3 +56,14 @@
         (.then #(go (>! ch [path])))
         (.catch #(go (>! ch [nil %]))))
     ch))
+
+(defn extract-urls-from-google-results [html]
+  (for [[_ url] (re-seq #"\"ou\":\"([^\"]\+)\"" html)] url))
+
+(defn search-images [q]
+  (if (or (nil? q) (some (partial str/starts-with? q) ["http://" "https://"]))
+    (go q)
+    (let [ch (chan)]
+      (GET "/api/search" :format :json :response-format :json :params {:q q :type "image"}
+           :handler #(go (>! ch %)))
+      ch)))

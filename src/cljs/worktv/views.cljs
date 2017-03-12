@@ -3,7 +3,8 @@
             [clojure.string :as str]
             [commons-ui.core :as c]
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
-            [worktv.utils :as u])
+            [worktv.utils :as u]
+            [worktv.backend :as b])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -103,12 +104,32 @@
                                            [:i.fa.fa-minus]]]]))
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
+(defn image-list [ch]
+  (with-let [urls (atom nil)]
+    (go (reset! urls (<! ch)))
+    (cond
+      (coll? @urls)
+      [:div {:style {:max-height "110px" :overflow-y "scroll"}}
+       (doall (for [group (partition 2 @urls)]
+                [:div
+                 (doall (for [url group]
+                          [:img {:src url :style {:max-width "50px" :max-height "50px"}}]))]))]
+      (not (nil? @urls))
+      [:img {:src @urls :style {:max-width "80px" :max-height "80px"}}])))
+
 (defn image-form [form]
-  [:form.form
-   [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
-   [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL"}]
-   [c/input {:type "radio" :label "Display" :model [form :display]
-             :items {"fit-full" "Fill" "clipped" "Clip"}}]])
+  [:div
+   [:form.form-horizontal
+    [c/input {:type "text" :label "Title" :model [form :title]
+              :placeholder "Optional title" :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
+    [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL or search text"
+              :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
+    [c/input {:type "radio" :label "Display" :model [form :display]
+              :wrapper-class "col-sm-10" :label-class "col-sm-2"
+              :items {"fit-full" "Fill" "clipped" "Clip"}}]]
+   [:div
+    [image-list (b/search-images (:url @form))]]])
+
 (defn custom-form [form]
   [:form.form
    [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]

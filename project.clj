@@ -23,7 +23,8 @@
                  [commons-ui "0.1.0-SNAPSHOT"]
                  [org.clojure/core.async "0.2.395"]
                  [ring/ring-json "0.4.0"]
-                 [cljsjs/d3 "4.3.0-2"]]
+                 [cljsjs/d3 "4.3.0-2"]
+                 [clj-http "3.4.1"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.5"]

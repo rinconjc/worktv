@@ -223,7 +223,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dash.mkr"]]
+     [:a.navbar-brand "Dashit"]]
     [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
       [:li [:a {:href "/"} "Home"]]
@@ -273,7 +273,7 @@
              [:i.fa.fa {:class icon}]]))]]]]]]])
 
 (defn design-page []
-  [:div.row.fill {:style {:padding "0px 20px"}}
+  [:div.row.fill {:style {:padding "0px 20px 90px"}}
    [:div.col-md-12.fill.full {:style {:background-color "#f5f5f5"}}
     [:div#layoutBox.fill {:style {:border "solid 1px" :border-color "#ddd"}}
      [layout-editor]]]])

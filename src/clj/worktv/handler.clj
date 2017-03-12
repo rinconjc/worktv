@@ -1,5 +1,7 @@
 (ns worktv.handler
-  (:require [compojure
+  (:require [clj-http.client :as client]
+            [clojure.core.async :refer [<!! chan]]
+            [compojure
              [core :refer [context defroutes GET POST]]
              [route :refer [not-found resources]]]
             [config.core :refer [env]]
@@ -45,14 +47,25 @@
   (fn [request]
     (update (handler request) :cookies assoc :csrf-token {:value *anti-forgery-token*})))
 
+(defn extract-urls-from-google-results [html]
+  (for [[_ url] (re-seq #"\"ou\":\"([^\"]\+)\"" html)] url))
+
+(defn search-images [q type]
+  (-> (client/get "https://www.google.com.au/search"
+                  {:query-params {"q" q "tbm" "isch"} :headers {"User-Agent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}})
+      :body extract-urls-from-google-results))
+
 (defroutes routes
-  (wrap-csrf-cookie
-   (context "/" []
-            (GET "/*" [] (loading-page))))
   (wrap-json-body
    (context "/api" []
             (POST "/project" [req]
-                  (println "req:" (-> req :body)))))
+                  (println "req:" (-> req :body)))
+            (GET "/search" [req]
+                 (let [{:keys [q type]} (-> req :params)]
+                   (search-images q type)))))
+  (wrap-csrf-cookie
+   (context "/" []
+            (GET "/*" [] (loading-page))))                 ;
 
   (resources "/")
   (not-found "Not Found"))
