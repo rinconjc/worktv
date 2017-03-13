@@ -52,7 +52,7 @@
 
 (defn search-images [q type]
   (-> (client/get "https://www.google.com.au/search"
-                  {:query-params {"q" q "tbm" "isch"} :headers {"User-Agent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}})
+                  {:query-params {"q" q "tbm" "isch"} :client-params {"http.useragent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}})
       :body extract-urls-from-google-results))
 
 (defroutes routes

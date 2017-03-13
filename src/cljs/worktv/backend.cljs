@@ -61,6 +61,7 @@
   (for [[_ url] (re-seq #"\"ou\":\"([^\"]\+)\"" html)] url))
 
 (defn search-images [q]
+  (js/console.log "searching " q)
   (if (or (nil? q) (some (partial str/starts-with? q) ["http://" "https://"]))
     (go q)
     (let [ch (chan)]

@@ -104,9 +104,10 @@
                                            [:i.fa.fa-minus]]]]))
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
-(defn image-list [ch]
-  (with-let [urls (atom nil)]
-    (go (reset! urls (<! ch)))
+(defn image-list [q]
+  (with-let [search-fn (u/throtled b/search-images 3000)
+             urls (atom nil)]
+    (go (reset! urls (<! (search-fn q))))
     (cond
       (coll? @urls)
       [:div {:style {:max-height "110px" :overflow-y "scroll"}}
@@ -128,7 +129,7 @@
               :wrapper-class "col-sm-10" :label-class "col-sm-2"
               :items {"fit-full" "Fill" "clipped" "Clip"}}]]
    [:div
-    [image-list (b/search-images (:url @form))]]])
+    [image-list (:url @form)]]])
 
 (defn custom-form [form]
   [:form.form
