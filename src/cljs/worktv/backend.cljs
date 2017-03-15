@@ -61,10 +61,10 @@
   (for [[_ url] (re-seq #"\"ou\":\"([^\"]\+)\"" html)] url))
 
 (defn search-images [q]
-  (js/console.log "searching " q)
   (if (or (nil? q) (some (partial str/starts-with? q) ["http://" "https://"]))
     (go q)
     (let [ch (chan)]
-      (GET "/api/search" :format :json :response-format :json :params {:q q :type "image"}
+      (GET "/api/search" :format :json :response-format :json :keywords? true
+           :params {:q q :type "image"}
            :handler #(go (>! ch %)))
       ch)))

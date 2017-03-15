@@ -1,6 +1,5 @@
 (ns worktv.handler
   (:require [clj-http.client :as client]
-            [clojure.core.async :refer [<!! chan]]
             [compojure
              [core :refer [context defroutes GET POST]]
              [route :refer [not-found resources]]]
@@ -8,8 +7,9 @@
             [hiccup.page :refer [html5 include-css include-js]]
             [ring.middleware
              [anti-forgery :refer [*anti-forgery-token*]]
-             [json :refer [wrap-json-body]]]
-            [worktv.middleware :refer [wrap-middleware]]))
+             [json :refer [wrap-json-body wrap-json-response]]]
+            [worktv.middleware :refer [wrap-middleware]]
+            [clojure.string :as str]))
 
 (def mount-target
   [:div#app.fill
@@ -48,21 +48,28 @@
     (update (handler request) :cookies assoc :csrf-token {:value *anti-forgery-token*})))
 
 (defn extract-urls-from-google-results [html]
-  (for [[_ url] (re-seq #"\"ou\":\"([^\"]\+)\"" html)] url))
+  (let [urls (map second (re-seq #"\"ou\":\"([^\"]+)\"" html))
+        imgs (for [[_ img] (re-seq #",\"(data:image[^\"]+)\"" html)
+                   :let [i (str/index-of img "\\u003d") _ (println "found?" i)]]
+               (if i (.substring img 0 i) img))]
+    (map #(hash-map :image %1 :url %2) imgs urls)))
 
 (defn search-images [q type]
   (-> (client/get "https://www.google.com.au/search"
-                  {:query-params {"q" q "tbm" "isch"} :client-params {"http.useragent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}})
+                  {:query-params {"q" q "tbm" "isch"}
+                   :headers {"User-Agent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}
+                   :client-params {"http.useragent" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"  }})
       :body extract-urls-from-google-results))
 
 (defroutes routes
-  (wrap-json-body
-   (context "/api" []
-            (POST "/project" [req]
-                  (println "req:" (-> req :body)))
-            (GET "/search" [req]
-                 (let [{:keys [q type]} (-> req :params)]
-                   (search-images q type)))))
+  (-> (context "/api" []
+               (POST "/project" [req]
+                     (println "req:" (-> req :body)))
+               (GET "/search" []
+                    (fn [req] (let [{:keys [q type]} (-> req :params)
+                                    result (search-images q type)]
+                                {:body result}))))
+      wrap-json-body wrap-json-response)
   (wrap-csrf-cookie
    (context "/" []
             (GET "/*" [] (loading-page))))                 ;

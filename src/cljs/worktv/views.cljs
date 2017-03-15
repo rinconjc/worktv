@@ -104,32 +104,34 @@
                                            [:i.fa.fa-minus]]]]))
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
-(defn image-list [q]
-  (with-let [search-fn (u/throtled b/search-images 3000)
-             urls (atom nil)]
-    (go (reset! urls (<! (search-fn q))))
-    (cond
-      (coll? @urls)
-      [:div {:style {:max-height "110px" :overflow-y "scroll"}}
-       (doall (for [group (partition 2 @urls)]
-                [:div
-                 (doall (for [url group]
-                          [:img {:src url :style {:max-width "50px" :max-height "50px"}}]))]))]
-      (not (nil? @urls))
-      [:img {:src @urls :style {:max-width "80px" :max-height "80px"}}])))
+(defn image-list [ch]
+  (with-let [content (atom nil)]
+    (go (when-let [urls (<! ch)]
+          (reset! content
+                  (cond
+                    (coll? urls)
+                    [:div {:style {:max-height "400px" :overflow-y "scroll"}}
+                     (doall (map-indexed
+                             (fn [i group]^{:key i}
+                               [:div
+                                (doall (for [{:keys [url image]} group]
+                                         [:a {:on-click #(js/console.log "url:" url)}
+                                          [:img {:src image :style {:max-width "260px" :max-height "260px"}}]]))]) (partition 2 urls)) )]
+                    :else [:img {:src urls :style {:max-width "180px" :max-height "180px"}}]))))
+    @content))
 
 (defn image-form [form]
-  [:div
-   [:form.form-horizontal
-    [c/input {:type "text" :label "Title" :model [form :title]
-              :placeholder "Optional title" :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
-    [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL or search text"
-              :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
-    [c/input {:type "radio" :label "Display" :model [form :display]
-              :wrapper-class "col-sm-10" :label-class "col-sm-2"
-              :items {"fit-full" "Fill" "clipped" "Clip"}}]]
-   [:div
-    [image-list (:url @form)]]])
+  (with-let [search-fn (u/throtled b/search-images 3000)]
+    [:div
+     [:form.form-horizontal
+      [c/input {:type "text" :label "Title" :model [form :title]
+                :placeholder "Optional title" :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
+      [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL or search text"
+                :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
+      [c/input {:type "radio" :label "Display" :model [form :display]
+                :wrapper-class "col-sm-10" :label-class "col-sm-2"
+                :items {"fit-full" "Fill" "clipped" "Clip"}}]]
+     [:div [image-list @(r/track search-fn (:url @form))]]]))
 
 (defn custom-form [form]
   [:form.form

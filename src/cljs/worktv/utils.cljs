@@ -1,6 +1,6 @@
 (ns worktv.utils
   (:require [ajax.core :refer [GET]]
-            [cljs.core.async :refer [>! chan sliding-buffer timeout]]
+            [cljs.core.async :refer [>! chan offer! sliding-buffer timeout]]
             [clojure.string :as str])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -45,14 +45,16 @@
 (defn throtled
   "returns a wrapper function that invokes the function f at least msecs apart!"
   [f msecs]
-  (let [c (sliding-buffer 1)
+  (let [c (chan (sliding-buffer 1))
         timer (chan)
         r (chan)]
     (go (<! timer) ; wait for a start!
         (loop []
           (<! (timeout msecs)) ; wait for timeout!
-          (>! r (apply f (<! c)))
-          (recur []))); apply f to the latest args
+          (let [args (<! c)
+                y (<! (apply f args))]
+            (if y (>! r y)))
+          (recur))); apply f to the latest args
     (fn [& args]
       (go (>! c args)
           (offer! timer :start))
