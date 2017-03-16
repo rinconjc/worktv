@@ -51,9 +51,9 @@
     (go (<! timer) ; wait for a start!
         (loop []
           (<! (timeout msecs)) ; wait for timeout!
-          (let [args (<! c)
-                y (<! (apply f args))]
-            (if y (>! r y)))
+          (loop [args (<! c)]
+            (let [[val ch] (alts! [c (apply f args)])]
+              (if (identical? c ch) (recur val) (if val (>! r val)))))
           (recur))); apply f to the latest args
     (fn [& args]
       (go (>! c args)

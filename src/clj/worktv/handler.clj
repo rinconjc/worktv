@@ -50,15 +50,14 @@
 (defn extract-urls-from-google-results [html]
   (let [urls (map second (re-seq #"\"ou\":\"([^\"]+)\"" html))
         imgs (for [[_ img] (re-seq #",\"(data:image[^\"]+)\"" html)
-                   :let [i (str/index-of img "\\u003d") _ (println "found?" i)]]
+                   :let [i (str/index-of img "\\u003d")]]
                (if i (.substring img 0 i) img))]
     (map #(hash-map :image %1 :url %2) imgs urls)))
 
 (defn search-images [q type]
   (-> (client/get "https://www.google.com.au/search"
                   {:query-params {"q" q "tbm" "isch"}
-                   :headers {"User-Agent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}
-                   :client-params {"http.useragent" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"  }})
+                   :headers {"User-Agent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}})
       :body extract-urls-from-google-results))
 
 (defroutes routes
