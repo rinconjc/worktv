@@ -10,7 +10,7 @@
                  [reagent-utils "0.2.0"]
                  [ring "1.5.0"]
                  [ring/ring-defaults "0.2.1"]
-                 [compojure "1.5.1"]
+                 [compojure "1.5.2"]
                  [hiccup "1.0.5"]
                  [yogthos/config "0.8"]
                  [org.clojure/clojurescript "1.9.229"
@@ -30,7 +30,8 @@
             [lein-cljsbuild "1.1.5"]
             [lein-asset-minifier "0.2.7"
              :exclusions [org.clojure/clojure]]
-            [lein-elastic-beanstalk "0.2.8-SNAPSHOT"]]
+            [lein-elastic-beanstalk "0.2.8-SNAPSHOT"
+             :exclusions [org.clojure/clojure]]]
 
   :ring {:handler worktv.handler/app
          :uberwar-name "worktv.war"}
