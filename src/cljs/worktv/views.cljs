@@ -11,7 +11,6 @@
   (.load "current" #js {:packages #js ["corechart"]})
   (.setOnLoadCallback #(js/console.log "g chart loaded!!....")))
 
-
 (def modal (r/atom nil))
 
 (defn table-view [[headers & rows]]
@@ -155,14 +154,10 @@
          (let [gviz (.-visualization js/google)
                columns (cons x-path (keys y-series))
                labels (cons x-label (vals y-series))
-               [data error] (<! (u/fetch-data url data-path columns))]
-           (if-let [data (and data
-                              (.arrayToDataTable gviz (clj->js
-                                                       (->> data
-                                                            rest
-                                                            (sort-by #(nth % 0))
-                                                            (cons labels)))))]
+               [data error] (<! (u/fetch-data url data-path columns))
+               data (if data (->> data rest (sort-by #(nth % 0)) (cons labels) clj->js))]
+           (if data
              (.. (js/google.visualization.LineChart. elem)
-                 (draw data #js {:title title :curveType "function"
-                                 :legend #js {:position "bottom"}}))
+                 (draw (.arrayToDataTable gviz data) #js {:title title :curveType "function"
+                                                           :legend #js {:position "bottom"}}))
              (js/console.log "error:" (clj->js error)))))))])

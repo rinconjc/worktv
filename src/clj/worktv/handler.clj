@@ -29,9 +29,9 @@
    (include-css "//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
    (include-js "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")
-   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-app.js")
-   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
-   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
+   ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-app.js")
+   ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
+   ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
    (include-js "https://www.gstatic.com/charts/loader.js")
    ])
 

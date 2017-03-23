@@ -23,8 +23,10 @@
                  [commons-ui "0.1.0-SNAPSHOT"]
                  [org.clojure/core.async "0.2.395"]
                  [ring/ring-json "0.4.0"]
-                 [cljsjs/d3 "4.3.0-2"]
-                 [clj-http "3.4.1"]]
+                 [clj-http "3.4.1"]
+                 ;; [cljsjs/jquery "2.2.4-0"]
+                 ;; [cljsjs/bootstrap "3.3.6-1"]
+                 [cljsjs/firebase "3.5.3-0"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.5"]
@@ -52,7 +54,8 @@
 
   :minify-assets
   {:assets
-   {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
+   {"resources/public/css/site.min.css" "resources/public/css/site.css"
+    "resources/public/css/splitter.min.css" "resources/public/css/splitter.css"}}
 
   :cljsbuild
   {:builds {:min
@@ -61,7 +64,8 @@
              {:output-to "target/cljsbuild/public/js/app.js"
               :output-dir "target/uberjar"
               :optimizations :advanced
-              :pretty-print  false}}
+              :pretty-print  false
+              :externs ["externs/externs.js"]}}
             :app
             {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
              :compiler
@@ -72,9 +76,6 @@
               :source-map true
               :optimizations :none
               :pretty-print  true}}
-
-
-
             }
    }
 
