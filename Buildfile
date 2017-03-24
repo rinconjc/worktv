@@ -1,1 +1,1 @@
-build: gradle -s -d build
+build: "gradle -s -d build"
