@@ -2,7 +2,7 @@
 
 type lein || {
     echo "downloading lein :)"
-    curl -v https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > ~/bin/lein
+    wget -v -S -O ~/bin/lein "https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein"
     chmod +x ~/bin/lein
 }
 
