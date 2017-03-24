@@ -31,8 +31,6 @@
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.5"]
             [lein-asset-minifier "0.2.7"
-             :exclusions [org.clojure/clojure]]
-            [lein-elastic-beanstalk "0.2.8-SNAPSHOT"
              :exclusions [org.clojure/clojure]]]
 
   :ring {:handler worktv.handler/app
