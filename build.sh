@@ -7,4 +7,4 @@
     chmod +x ~/lein
 }
 
-~/lein uberjar
+~/lein -U clean uberjar
