@@ -104,20 +104,22 @@
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
 (defn image-list [ch]
-  (with-let [content (atom nil)]
-    (go (when-let [urls (<! ch)]
-          (reset! content
-                  (cond
-                    (coll? urls)
-                    [:div {:style {:max-height "400px" :overflow-y "scroll"}}
-                     (doall (map-indexed
-                             (fn [i group]^{:key i}
-                               [:div
-                                (doall (for [{:keys [url image]} group]
-                                         [:a {:on-click #(js/console.log "url:" url)}
-                                          [:img {:src image :style {:max-width "260px" :max-height "260px"}}]]))]) (partition 2 urls)) )]
-                    :else [:img {:src urls :style {:max-width "180px" :max-height "180px"}}]))))
-    @content))
+  (with-let [urls (atom nil)]
+    (go (if-let [r (<! ch)]
+          (reset! urls r)))
+    (if @urls
+      (cond
+        (coll? @urls)
+        [:div {:style {:max-height "400px" :overflow-y "scroll"}}
+         (doall
+          (map-indexed
+           (fn [i group]^{:key i}
+             [:div (doall (for [{:keys [url image]} group] ^{:key url}
+                            [:a {:href "#" :on-click #(.preventDefault %)}
+                             [:img {:src image :data-url url
+                                    :style {:max-width "260px" :max-height "260px"}}]]))])
+           (partition 2 @urls)) )]
+        :else [:img {:src @urls :style {:max-width "400px" :max-height "400px"}}]))))
 
 (defn image-form [form]
   (with-let [search-fn (u/throtled b/search-images 3000)]
@@ -130,7 +132,9 @@
       [c/input {:type "radio" :label "Display" :model [form :display]
                 :wrapper-class "col-sm-10" :label-class "col-sm-2"
                 :items {"fit-full" "Fill" "clipped" "Clip"}}]]
-     [:div [image-list @(r/track search-fn (:url @form))]]]))
+     [:div {:on-double-click #(if-let [url (-> % .-target (.getAttribute "data-url"))]
+                                (swap! form assoc :url url))}
+      [image-list @(r/track search-fn (:url @form))]]]))
 
 (defn custom-form [form]
   [:form.form
@@ -159,5 +163,5 @@
            (if data
              (.. (js/google.visualization.LineChart. elem)
                  (draw (.arrayToDataTable gviz data) #js {:title title :curveType "function"
-                                                           :legend #js {:position "bottom"}}))
+                                                          :legend #js {:position "bottom"}}))
              (js/console.log "error:" (clj->js error)))))))])

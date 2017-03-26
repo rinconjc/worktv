@@ -19,7 +19,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dash.mkr"]]
+     [:a.navbar-brand "Dash" [:i "It"]]]
     [:navbar.navbar-collapse-collapse {:id "navbar"}
      [:ul.nav.navbar-nav.navbar-left
       (if (session/get :user)
