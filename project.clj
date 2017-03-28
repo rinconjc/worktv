@@ -24,8 +24,6 @@
                  [org.clojure/core.async "0.2.395"]
                  [ring/ring-json "0.4.0"]
                  [clj-http "3.4.1"]
-                 ;; [cljsjs/jquery "2.2.4-0"]
-                 ;; [cljsjs/bootstrap "3.3.6-1"]
                  [cljsjs/firebase "3.5.3-0"]]
 
   :plugins [[lein-environ "1.0.2"]

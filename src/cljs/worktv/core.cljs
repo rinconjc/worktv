@@ -53,7 +53,7 @@
                                (do
                                  (session/put! :user user)
                                  (secretary/dispatch! "/"))))))}
-       [c/input {:type "text" :label "Email:" :model [login :username]}]
+       [c/input {:type "email" :label "Email:" :model [login :username]}]
        [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))
 
