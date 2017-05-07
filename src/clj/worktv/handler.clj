@@ -13,10 +13,11 @@
 
 (def mount-target
   [:div#app.fill
-   [:h3 "ClojureScript has not been compiled!"]
-   [:p "please run "
-    [:b "lein figwheel"]
-    " in order to start the compiler"]])
+   (if (env :dev)
+     [:h3 "ClojureScript has not been compiled!"]
+     [:p "please run "
+      [:b "lein figwheel"]
+      " in order to start the compiler"])])
 
 (defn head []
   [:head
@@ -29,9 +30,9 @@
    (include-css "//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
    (include-js "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")
-   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-app.js")
-   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
-   (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
+   ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-app.js")
+   ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
+   ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
    (include-js "https://www.gstatic.com/charts/loader.js")
    ])
 
@@ -48,17 +49,17 @@
     (update (handler request) :cookies assoc :csrf-token {:value *anti-forgery-token*})))
 
 (defn extract-urls-from-google-results [html]
-  (let [urls (map second (re-seq #"\"ou\":\"([^\"]+)\"" html))
-        imgs (for [[_ img] (re-seq #",\"(data:image[^\"]+)\"" html)
-                   :let [i (str/index-of img "\\u003d") _ (println "found?" i)]]
-               (if i (.substring img 0 i) img))]
-    (map #(hash-map :image %1 :url %2) imgs urls)))
+  (spit "/tmp/dump.html" html)
+  (let [urls (into {} (for [[_ meta] (re-seq #"<div class=\"rg_meta\">\{([^\}]+)\}" html)]
+                        (-> (re-find #"\"id\":\"([^\"]+)\".+\"ou\":\"([^\"]+)\"" meta) rest vec)))]
+    (for [[_ id img] (re-seq #"\[\"([^\"]+)\",\"(data:image[^\"]+)\"\]" html)
+          :let [i (str/index-of img "\\u003d")]]
+      {:url (urls id) :image (if i (.substring img 0 i) img)})))
 
 (defn search-images [q type]
   (-> (client/get "https://www.google.com.au/search"
                   {:query-params {"q" q "tbm" "isch"}
-                   :headers {"User-Agent" "Mozilla/5.0 (X11; Linux i686; rv:10.0.1) Gecko/20100101 Firefox/10.0.1 SeaMonkey/2.7.1"}
-                   :client-params {"http.useragent" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"  }})
+                   :headers {"User-Agent" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"}})
       :body extract-urls-from-google-results))
 
 (defroutes routes

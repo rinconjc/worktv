@@ -10,10 +10,10 @@
                  [reagent-utils "0.2.0"]
                  [ring "1.5.0"]
                  [ring/ring-defaults "0.2.1"]
-                 [compojure "1.5.1"]
+                 [compojure "1.5.2"]
                  [hiccup "1.0.5"]
                  [yogthos/config "0.8"]
-                 [org.clojure/clojurescript "1.9.229"
+                 [org.clojure/clojurescript "1.9.521"
                   :scope "provided"]
                  [secretary "1.2.3"]
                  [venantius/accountant "0.1.7"
@@ -21,12 +21,14 @@
                  [cljs-ajax "0.5.8"]
                  [cljsjs/mustache "2.2.1-0"]
                  [commons-ui "0.1.0-SNAPSHOT"]
-                 [org.clojure/core.async "0.2.395"]
+                 [org.clojure/core.async "0.2.395"
+                  :exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
-                 [clj-http "3.4.1"]]
+                 [clj-http "3.4.1"]
+                 [cljsjs/firebase "3.5.3-0"]]
 
   :plugins [[lein-environ "1.0.2"]
-            [lein-cljsbuild "1.1.5"]
+            [lein-cljsbuild "1.1.5" :exclusions [[org.clojure/clojure]]]
             [lein-asset-minifier "0.2.7"
              :exclusions [org.clojure/clojure]]]
 
@@ -44,12 +46,13 @@
    [:cljsbuild :builds :app :compiler :output-dir]
    [:cljsbuild :builds :app :compiler :output-to]]
 
-  :source-paths ["src/clj" "src/cljc"]
+  :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :resource-paths ["resources" "target/cljsbuild"]
 
   :minify-assets
   {:assets
-   {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
+   {"resources/public/css/site.min.css" "resources/public/css/site.css"
+    "resources/public/css/splitter.min.css" "resources/public/css/splitter.css"}}
 
   :cljsbuild
   {:builds {:min
@@ -58,7 +61,8 @@
              {:output-to "target/cljsbuild/public/js/app.js"
               :output-dir "target/uberjar"
               :optimizations :advanced
-              :pretty-print  false}}
+              :pretty-print  false
+              :externs ["externs/externs.js"]}}
             :app
             {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
              :compiler
@@ -68,18 +72,13 @@
               :output-dir "target/cljsbuild/public/js/out"
               :source-map true
               :optimizations :none
-              :pretty-print  true}}
-
-
-
-            }
-   }
+              :pretty-print  true}}}}
 
 
   :figwheel
   {:http-server-root "public"
-   :server-port 3449
-   :nrepl-port 7002
+   :server-port 3447
+   :nrepl-port 7001
    :nrepl-middleware ["cemerick.piggieback/wrap-cljs-repl"
                       ]
    :css-dirs ["resources/public/css"]
@@ -93,14 +92,14 @@
                    :dependencies [[ring/ring-mock "0.3.0"]
                                   [ring/ring-devel "1.5.0"]
                                   [prone "1.1.2"]
-                                  [figwheel-sidecar "0.5.8"]
+                                  [figwheel-sidecar "0.5.10"]
                                   [org.clojure/tools.nrepl "0.2.12"]
                                   [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
                                   [pjstadig/humane-test-output "0.8.1"]
                                   ]
 
                    :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.5.8"]
+                   :plugins [[lein-figwheel "0.5.10"]
                              ]
 
                    :injections [(require 'pjstadig.humane-test-output)

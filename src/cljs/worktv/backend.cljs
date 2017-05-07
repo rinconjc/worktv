@@ -2,7 +2,8 @@
   (:require [clojure.core.async :refer [>! chan]]
             [worktv.utils :as u]
             [ajax.core :refer [GET]]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [cljsjs.firebase])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"

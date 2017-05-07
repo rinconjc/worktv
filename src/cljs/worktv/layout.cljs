@@ -223,7 +223,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dashit"]]
+     [:a.navbar-brand "Dash" [:i "It"]]]
     [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
       [:li [:a {:href "/"} "Home"]]

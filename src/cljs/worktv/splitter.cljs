@@ -21,8 +21,9 @@
          :or {split-at "50%" min-size [0 0]} :as model} pane1 pane2 on-change]
       (let [styles (splitter-attrs orientation split-at)
             update-pos (fn [full-size pos]
-                         (when-not (or (< pos (min-size 0)) (< (- full-size pos) (min-size 1)))
-                           (on-change (assoc model :split-at pos))))
+                         (if-not (or (< pos (min-size 0)) (< (- full-size pos) (min-size 1)))
+                           (on-change (assoc model
+                                             :split-at (-> pos (* 100) (/ full-size) (str "%"))))))
             mouse-move (fn[e]
                          (when-let [bounds (and @elem (-> @elem .getBoundingClientRect))]
                            (if (= :vertical orientation)

@@ -1,9 +1,10 @@
 (ns worktv.server
-  (:require [worktv.handler :refer [app]]
-            [config.core :refer [env]]
-            [ring.adapter.jetty :refer [run-jetty]])
-  (:gen-class))
+  (:gen-class)
+  (:require [config.core :refer [env]]
+            [ring.adapter.jetty :refer [run-jetty]]
+            [ring.middleware.reload :refer [wrap-reload]]
+            [worktv.handler :refer [app]]))
 
  (defn -main [& args]
    (let [port (Integer/parseInt (or (env :port) "3003"))]
-     (run-jetty app {:port port :join? false})))
+     (run-jetty (wrap-reload app) {:port port :join? false})))

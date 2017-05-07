@@ -19,7 +19,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dash.mkr"]]
+     [:a.navbar-brand "Dash" [:i "It"]]]
     [:navbar.navbar-collapse-collapse {:id "navbar"}
      [:ul.nav.navbar-nav.navbar-left
       (if (session/get :user)
@@ -50,10 +50,8 @@
                            (let [[user, err] (<! (b/login (:username @login) (:password @login)))]
                              (if err
                                (reset! error [c/alert "danger" err])
-                               (do
-                                 (session/put! :user user)
-                                 (secretary/dispatch! "/"))))))}
-       [c/input {:type "text" :label "Email:" :model [login :username]}]
+                               (do (session/put! :user user) (secretary/dispatch! "/"))))))}
+       [c/input {:type "email" :label "Email:" :model [login :username]}]
        [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))
 
@@ -94,6 +92,11 @@
 
 ;; -------------------------
 ;; Initialize app
+(defn on-js-reload []
+  ;; optionally touch your app-state to force rerendering depending on
+  ;; your application
+  ;; (swap! app-state update-in [:__figwheel_counter] inc)
+  )
 
 (defn mount-root []
   (reagent/render [current-page] (.getElementById js/document "app")))
