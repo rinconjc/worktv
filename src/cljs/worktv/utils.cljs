@@ -6,6 +6,73 @@
 
 (defn visit [x f] (f x) x)
 
+(def  date-operand-pattern #"\s*(\+|-)\s*(\d+)\s*(\w+)")
+(def  date-exp-pattern #"(\w+)((\s*(\+|-)\s*\d+\s*\w+)*)(:(.+))?")
+(def  date-fields (as-> {"sec" 1000} fields
+                    (assoc fields "min" (* 60 (fields "sec")))
+                    (assoc fields "hour" (* 60 (fields "min")))
+                    (assoc fields "day" (* 24 (fields "hour")))
+                    (assoc fields "week" (* 7 (fields "day")))))
+
+(defn- eval-date-exp [cal [num name]]
+  (case name
+    "month" (let [month (+ (.getMonth cal) num)]
+              (if (neg? month)
+                (doto cal (.setFullYear (+ (.getFullYear cal) (Math/floor (/ month 12))))
+                      (.setMonth (+ 11 (rem month 12))))
+                (doto cal (.setFullYear (+ (.getFullYear cal) (Math/floor (/ month 12))))
+                      (.setMonth (rem month 12)))))
+    (-> name date-fields (* num) (+ (.getTime cal)) (js/Date.))))
+
+(defn date-from-name [name]
+  (let [cal (js/Date.)]
+    (case name
+      "now" cal
+      "today" cal
+      "tomorrow" (eval-date-exp cal [1 "day"])
+      "yesterday" (eval-date-exp cal [-1 "day"])
+      nil)))
+
+(defn- extract [date key]
+  (case key
+    "yy" (-> date .getFullYear (.subtr 2 2))
+    "yyyy" (.getFullYear date)
+    "d" (.getDate date)
+    "M" (inc (.getMonth date))
+    "H" (.getHours date)
+    "m" (.getMinutes date)
+    "s" (.getSeconds date)
+    "S" (.getMilliseconds date)
+    "SSS" (as-> (.getMilliseconds date) v (str (condp > v 10 "00" 100 "0") v))
+    (as-> (case key
+            "MM" (-> date .getMonth inc)
+            "dd" (.getDate date)
+            "HH" (.getHours date)
+            "mm" (.getMinutes date)
+            "ss" (.getSeconds date)
+            key) v (if (and (int? v) (< v 10)) (str "0" v) (str v)))))
+
+(defn format-date [date fmt]
+  (let [parts (reduce (fn [ss c]
+                        (if (and (not-empty ss) (= c (-> ss last last)))
+                          (update ss (dec (count ss)) str c)
+                          (conj ss (str c)))) [] fmt)]
+    (reduce #(str %1 (extract date %2)) "" parts)))
+
+(defn parse-date-exp [s]
+  (if-let [[_ name operands _ _ _ fmt] (visit (re-matches date-exp-pattern s)
+                                              (partial println "parsed?"))]
+    (if-let [cal (date-from-name name)]
+      (let [operations (some->> operands (re-seq date-operand-pattern)
+                                (map (fn [[_ op n name]]
+                                       [(* (if (= op "+") 1 -1) (js/parseInt n)) name])))
+            cal (if operations (reduce eval-date-exp cal operations) cal)]
+        (format-date (or fmt "yyyy-MM-dd") cal)))))
+
+(defn expand-url [url]
+  (str/replace url #"\$([^\$]+)\$"
+               #(parse-date-exp (second %))))
+
 (defn- headers-and-extractors [data]
   (cond
     (map? data) (let [[_ v] (first data)]
@@ -32,7 +99,7 @@
 
 (defn fetch-data
   "retrieves tablified data from the given url and json-path"
-  ([url path] (fetch-data url path nil))
+  ([url path] (fetch-data (expand-url url) path nil))
   ([url path columns]
    (let [ch (chan)]
      (GET url :format :json :response-format :json :handler #(go (>! ch [%]))
