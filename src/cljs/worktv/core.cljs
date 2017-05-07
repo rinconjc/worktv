@@ -43,7 +43,7 @@
     [:div.row
      [:div.col-sm-3.col-sm-offset-4
       [:h2 "Login"]
-      @error
+      [:div.row @error]
       [:form.form
        {:on-submit #(do  (.preventDefault %)
                          (go
