@@ -60,14 +60,13 @@
     (reduce #(str %1 (extract date %2)) "" parts)))
 
 (defn parse-date-exp [s]
-  (if-let [[_ name operands _ _ _ fmt] (visit (re-matches date-exp-pattern s)
-                                              (partial println "parsed?"))]
+  (if-let [[_ name operands _ _ _ fmt] (re-matches date-exp-pattern s)]
     (if-let [cal (date-from-name name)]
       (let [operations (some->> operands (re-seq date-operand-pattern)
                                 (map (fn [[_ op n name]]
                                        [(* (if (= op "+") 1 -1) (js/parseInt n)) name])))
             cal (if operations (reduce eval-date-exp cal operations) cal)]
-        (format-date (or fmt "yyyy-MM-dd") cal)))))
+        (format-date cal (or fmt "yyyy-MM-dd"))))))
 
 (defn expand-url [url]
   (str/replace url #"\$([^\$]+)\$"
