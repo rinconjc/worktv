@@ -122,7 +122,7 @@
         :else [:img {:src @urls :style {:max-width "400px" :max-height "400px"}}]))))
 
 (defn image-form [form]
-  (with-let [search-fn (u/throtled b/search-images 3000)]
+  (with-let [search-fn (u/throtled b/search-images 1000)]
     [:div
      [:form.form-horizontal
       [c/input {:type "text" :label "Title" :model [form :title]

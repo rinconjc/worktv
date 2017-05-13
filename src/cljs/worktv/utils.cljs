@@ -114,13 +114,13 @@
   (let [c (chan (sliding-buffer 1))
         timer (chan)
         r (chan)]
-    (go (<! timer) ; wait for a start!
-        (loop []
-          (<! (timeout msecs)) ; wait for timeout!
-          (loop [args (<! c)]
-            (let [[val ch] (alts! [c (apply f args)])]
-              (if (identical? c ch) (recur val) (if val (>! r val)))))
-          (recur))); apply f to the latest args
+    (go
+      (<! timer)
+      (loop [last-arg nil]
+        (let [[val ch] (alts! [c (timeout msecs)])]
+          (if (identical? c ch) (recur val)
+              (do (some->> (<! (apply f last-arg)) (>! r))
+                  (recur nil)))))); apply f to the latest args
     (fn [& args]
       (go (>! c args)
           (offer! timer :start))
