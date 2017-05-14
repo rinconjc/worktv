@@ -59,6 +59,7 @@
 (defn search-images [q type]
   (-> (client/get "https://www.google.com.au/search"
                   {:query-params {"q" q "tbm" "isch"}
+                   :insecure? true
                    :headers {"User-Agent" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"}})
       :body extract-urls-from-google-results))
 
