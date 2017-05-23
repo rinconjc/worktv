@@ -156,7 +156,7 @@
       (swap! current-design update :layout assoc
              (:id pane) {:id (:id pane) :type :container-pane :orientation orientation
                          :pane1 pane1-id :pane2 pane2-id}
-             pane1-id {:id pane1-id :type :content-pane}
+             pane1-id (merge pane {:id pane1-id :type :content-pane})
              pane2-id {:id pane2-id :type :content-pane})
       (reset! selected-pane-id nil))
     (reset! alert (c/alert {:type "danger"}

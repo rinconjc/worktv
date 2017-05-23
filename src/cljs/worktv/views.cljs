@@ -124,7 +124,7 @@
 (defn image-form [form]
   (with-let [search-fn (u/throtled b/search-images 500)]
     [:div
-     [:form
+     [:form.form.form-horizontal
       [c/input {:type "text" :label "Title" :model [form :title]
                 :placeholder "Optional title" :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
       [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL or search text"
@@ -160,6 +160,7 @@
                labels (cons x-label (vals y-series))
                [data error] (<! (u/fetch-data url data-path columns))
                data (if data (->> data rest (sort-by #(nth % 0)) (cons labels) clj->js))]
+           (js/console.log "rendering chart...")
            (if data
              (.. (js/google.visualization.LineChart. elem)
                  (draw (.arrayToDataTable gviz data) #js {:title title :curveType "function"

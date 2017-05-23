@@ -98,9 +98,10 @@
 
 (defn fetch-data
   "retrieves tablified data from the given url and json-path"
-  ([url path] (fetch-data (expand-url url) path nil))
+  ([url path] (fetch-data url path nil))
   ([url path columns]
-   (let [ch (chan)]
+   (let [ch (chan)
+         url (expand-url url)]
      (GET url :format :json :response-format :json :handler #(go (>! ch [%]))
           :keywordize-keys true :error-handler #(go (>! ch [nil %])))
      (go (let [[data error] (<! ch)]
