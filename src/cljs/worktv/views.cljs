@@ -144,15 +144,16 @@
              :placeholder "60"}]
    [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]])
 
-(defn with-node [node-fn]
+(defn with-node [data node-fn]
   (r/create-class
-   {:reagent-render (fn [] [:div.fill.full {:ref "chart" :width "100%" :height "100%"}])
-    :component-did-mount (fn [this] (node-fn (-> this .-refs .-chart)))
-    :should-component-update (fn [this] (node-fn (-> this .-refs .-chart)))}))
+   {:reagent-render (fn [data node-fn] [:div.fill.full {:ref "chart" :width "100%" :height "100%"}])
+    :component-did-mount (fn [this] (node-fn (-> this .-refs .-chart) data))
+    :component-will-update (fn [this [_ data node-fn]] (node-fn (-> this .-refs .-chart) data))
+    :should-component-update (fn [this] true)}))
 
-(defn chart-view [{:keys [title url data-path x-path x-label y-series] :as pane}]
-  [with-node
-   (fn [elem]
+(defn chart-view [pane]
+  [with-node pane
+   (fn [elem {:keys [title url data-path x-path x-label y-series] :as pane}]
      (if (and url data-path)
        (go
          (let [gviz (.-visualization js/google)
@@ -160,7 +161,7 @@
                labels (cons x-label (vals y-series))
                [data error] (<! (u/fetch-data url data-path columns))
                data (if data (->> data rest (sort-by #(nth % 0)) (cons labels) clj->js))]
-           (js/console.log "rendering chart...")
+           (js/console.log "rendering chart..." title)
            (if data
              (.. (js/google.visualization.LineChart. elem)
                  (draw (.arrayToDataTable gviz data) #js {:title title :curveType "function"
