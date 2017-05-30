@@ -116,23 +116,16 @@
 
 (defn data-view [url template refresh]
   (with-let [data (atom nil)
-             last-url (atom url)
-             last-refresh (atom nil)
              load (fn []
                     (GET url :handler #(reset! data %) :response-format :json
-                         :error-handler #(js/console.log "failed fetching " url ";" %))
-                    (reset! last-url url))
-             interval-id (atom nil)]
-    (when (not= refresh @last-refresh)
-      (if @interval-id (.clearInterval js/window @interval-id))
-      (if (and refresh (> refresh 0))
-        (reset! interval-id (js/setInterval load (* refresh 1000))))
-      (reset! last-refresh refresh))
-    (if-not (and @data (= @last-url url)) (load))
+                         :error-handler #(js/console.log "failed fetching " url ";" %)))
+             _ (load)]
+    (js/setTimeout load (* (Math/max 60 refresh) 1000))
     [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
                {:__html (js/Mustache.render template (clj->js (or @data "no data")))}}]))
 
 (defmethod content-view :custom [{:keys [url template title refresh-interval]}]
+  (js/console.log "custom:" url)
   (if (and url template)
     [data-view url template refresh-interval]
     [:div.fit "Missing url and/or template"]))
