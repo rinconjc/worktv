@@ -122,7 +122,8 @@
              _ (load)]
     (js/setTimeout load (* (Math/max 60 refresh) 1000))
     [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
-               {:__html (js/Mustache.render template (clj->js (or @data "no data")))}}]))
+               ;; {:__html (js/Mustache.render template (clj->js (or @data #js {})))}
+               {:__html ((js/Handlebars.compile template) (clj->js (or @data #js {})))}}]))
 
 (defmethod content-view :custom [{:keys [url template title refresh-interval]}]
   (js/console.log "custom:" url)

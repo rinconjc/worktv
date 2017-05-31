@@ -110,4 +110,5 @@
     (fn [path]
       (secretary/locate-route path))})
   (accountant/dispatch-current!)
-  (mount-root))
+  (mount-root)
+  (js/Handlebars registerHelper "fmt" #()))
