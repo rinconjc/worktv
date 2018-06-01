@@ -111,4 +111,6 @@
       (secretary/locate-route path))})
   (accountant/dispatch-current!)
   (mount-root)
-  (js/Handlebars registerHelper "fmt" #()))
+  (js/Handlebars.registerHelper
+   "round" (fn [value opts]
+             (-> value js/Number (.toFixed (-> opts .-hash .-decimals))))))

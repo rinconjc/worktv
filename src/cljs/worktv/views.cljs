@@ -103,6 +103,13 @@
                                            [:i.fa.fa-minus]]]]))
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
+(defn web-page-form [form]
+  [:form.form
+   [c/input {:type "test" :label "URL" :placeholder "Past page URL" :model [form :url]}]
+   (if-let [url (:url @form)]
+     [:div.full.fill
+      [:embed.full.fill {:src url}]])])
+
 (defn image-list [ch]
   (with-let [urls (atom nil)]
     (go (if-let [r (<! ch)]
@@ -113,7 +120,7 @@
         [:div {:style {:max-height "400px" :overflow-y "scroll"}}
          (doall
           (map-indexed
-           (fn [i group]^{:key i}
+           (fn [i group] ^{:key i}
              [:div (doall (for [{:keys [url image]} group] ^{:key url}
                             [:a {:href "#" :on-click #(.preventDefault %)}
                              [:img {:src image :data-url url
