@@ -82,7 +82,8 @@
      (content-editor model)]))
 
 (defn show-editor [model]
-  (reset! modal [editor-dialog (:id model)]))
+  (when (:content-type model)
+    (reset! modal [editor-dialog (:id model)])))
 
 (defmulti content-view :content-type)
 
@@ -144,7 +145,9 @@
   [:div.fill "blank content"])
 
 (defn layout-editor []
-  [:div.fill.full
+  [:div.fill.full {:tabIndex 1 :on-key-down #(do
+                                               (js/console.log "keydown:" %)
+                                               (.preventDefault %))}
    @alert
    @modal
    (pane-view (pane-by-id 1))])
@@ -223,7 +226,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand {:href "#"} "Dash" [:i "It"]]]
+     [:a.navbar-brand {:href "#"} "MashUpMkr"]]
     [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
       [:li [:a {:href "/"} "Home"]]
@@ -256,7 +259,7 @@
         [:li [:a {:href "#" :on-click #(split-pane :horizontal) :title "Split pane horizontally"}
               [:i.fa.fa-columns.fa-fw] "Horizontal"]]
         [:li [:a {:href "#" :on-click #(delete-pane) :title "Delete selected pane"}
-              [:i.fa.fa-trash-o.fa-fw] "Delete"]]]]
+              [:i.fa.fa-trash.fa-fw] "Delete"]]]]
       [:li.dropdown
        [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
                             :aria-expanded false} "Widgets" [:span.caret]]

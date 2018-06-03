@@ -126,3 +126,16 @@
       (go (>! c args)
           (offer! timer :start))
       r)))
+
+(defn- match-key [key e]
+  (case key
+    "ctrl" (.-ctrlKey e)
+    "alt" (.-altKey e)
+    "shift" (.-shiftKey e)
+    (= key (String/fromCharCode (.-keyCode e)))))
+
+(defn handle-key [key action]
+  (let [keys (str/split key "\s*\+\s*")]
+    (fn [e]
+      (.preventDefault e)
+      (every? match-key keys))))
