@@ -15,7 +15,8 @@
              :refer
              [chart-form modal modal-dialog save-form search-project-form]]
             [cljsjs.mustache]
-            [worktv.views :refer [web-page-form]])
+            [worktv.views :refer [web-page-form]]
+            [worktv.utils :refer [handle-keys]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def ^:dynamic *edit-mode* true)
@@ -37,6 +38,8 @@
 
 (def selected-pane-id (atom nil))
 (def alert (atom nil))
+
+(declare split-pane delete-pane)
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -145,9 +148,11 @@
   [:div.fill "blank content"])
 
 (defn layout-editor []
-  [:div.fill.full {:tabIndex 1 :on-key-down #(do
-                                               (js/console.log "keydown:" %)
-                                               (.preventDefault %))}
+  [:div.fill.full
+   {:tabIndex 1
+    :on-key-down (handle-keys "ctrl+h" #(split-pane :horizontal)
+                              "ctrl+v" #(split-pane :vertical)
+                              "ctrl+k" #(delete-pane))}
    @alert
    @modal
    (pane-view (pane-by-id 1))])
