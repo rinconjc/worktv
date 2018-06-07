@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0"]
                  [ring-server "0.4.0"]
                  [reagent "0.6.0"]
                  [reagent-utils "0.2.0"]
@@ -13,7 +13,7 @@
                  [compojure "1.5.2"]
                  [hiccup "1.0.5"]
                  [yogthos/config "0.8"]
-                 [org.clojure/clojurescript "1.9.521"
+                 [org.clojure/clojurescript "1.10.238"
                   :scope "provided"]
                  [secretary "1.2.3"]
                  [venantius/accountant "0.1.7"
@@ -28,7 +28,7 @@
                  [cljsjs/firebase "3.5.3-0"]]
 
   :plugins [[lein-environ "1.0.2"]
-            [lein-cljsbuild "1.1.5" :exclusions [[org.clojure/clojure]]]
+            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
             [lein-asset-minifier "0.2.7"
              :exclusions [org.clojure/clojure]]]
 
