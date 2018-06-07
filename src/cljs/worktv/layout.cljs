@@ -14,15 +14,19 @@
              v
              :refer
              [chart-form modal modal-dialog save-form search-project-form]]
-            [cljsjs.mustache])
+            [cljsjs.mustache]
+            [worktv.views :refer [web-page-form]]
+            [worktv.utils :refer [handle-keys]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def ^:dynamic *edit-mode* true)
 
 (def content-types [{:type :image :label "Image" :icon "fa-image"}
-                    {:type :video :label "Video" :icon "fa-file-video-o"}
+                    {:type :video :label "Video" :icon "fa-file-video"}
                     {:type :custom :label "Custom" :icon "fa-code"}
-                    {:type :chart :label "Chart" :icon "fa-bar-chart-o"}])
+                    {:type :chart :label "Chart" :icon "fa-chart-bar"}
+                    {:type :page :label "Web Page" :icon "fa-newspaper"}
+                    {:type :slides :label "Slides" :icon "fa-film" }])
 
 (def blank-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"})
 
@@ -34,6 +38,8 @@
 
 (def selected-pane-id (atom nil))
 (def alert (atom nil))
+
+(declare split-pane delete-pane)
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -69,6 +75,9 @@
 (defmethod content-editor :chart [pane]
   [chart-form pane])
 
+(defmethod content-editor :page [pane]
+  [web-page-form pane])
+
 (defn editor-dialog [pane-id]
   (with-let [model (atom (pane-by-id pane-id))]
     [modal-dialog {:title (str "Edit " (-> @model :content-type name) " details")
@@ -76,7 +85,8 @@
      (content-editor model)]))
 
 (defn show-editor [model]
-  (reset! modal [editor-dialog (:id model)]))
+  (when (:content-type model)
+    (reset! modal [editor-dialog (:id model)])))
 
 (defmulti content-view :content-type)
 
@@ -139,6 +149,10 @@
 
 (defn layout-editor []
   [:div.fill.full
+   {:tabIndex 1
+    :on-key-down (handle-keys "ctrl+h" #(split-pane :horizontal)
+                              "ctrl+v" #(split-pane :vertical)
+                              "ctrl+k" #(delete-pane))}
    @alert
    @modal
    (pane-view (pane-by-id 1))])
@@ -153,7 +167,7 @@
              pane1-id (merge pane {:id pane1-id :type :content-pane})
              pane2-id {:id pane2-id :type :content-pane})
       (reset! selected-pane-id nil))
-    (reset! alert (c/alert {:type "danger"}
+    (reset! alert (c/alert {:type "danger" :fade-after 5}
                            "Please select the pane to split first"))))
 
 (defn delete-pane []
@@ -217,7 +231,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dash" [:i "It"]]]
+     [:a.navbar-brand {:href "#"} "MashUpMkr"]]
     [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
       [:li [:a {:href "/"} "Home"]]
@@ -241,30 +255,27 @@
                   :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
                                  (.preventDefault %))}
               "Show"]]]]
-      [:li
-       [:div.btn-toolbar
-        [:span.navbar-text "|"]
-        [:div.btn-group
-         [:button.btn.btn-default.navbar-btn.disabled "Layout"]
-         [:button.btn.btn-default.navbar-btn
-          {:on-click #(split-pane :vertical) :title "Split pane vertically"}
-          [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]
-         [:button.btn.btn-default.navbar-btn
-          {:on-click #(split-pane :horizontal) :title "Split pane horizontally"}
-          [:i.fa.fa-columns.fa-fw] "Horizontal"]
-         [:button.btn.btn-default.navbar-btn
-          {:on-click #(delete-pane) :title "Delete selected pane"}
-          [:i.fa.fa-trash-o.fa-fw] "Delete"]]
-        [:span.navbar-text "|"]
-        [:div.btn-group
-         [:button.btn.btn-default.navbar-btn.disabled "Widgets"]
-         (doall
-          (for [{:keys [type label icon]} content-types]
-            ^{:key type}
-            [:button.btn.btn-default.navbar-btn
-             {:draggable true :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
-              :title label}
-             [:i.fa.fa {:class icon}]]))]]]]]]])
+      [:li.dropdown
+       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
+                            :aria-expanded false} "Layout" [:span.caret]]
+       [:ul.dropdown-menu
+        [:li [:a {:href "#" :on-click #(split-pane :vertical) :title "Split pane vertically"}
+              [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]]
+        [:li [:a {:href "#" :on-click #(split-pane :horizontal) :title "Split pane horizontally"}
+              [:i.fa.fa-columns.fa-fw] "Horizontal"]]
+        [:li [:a {:href "#" :on-click #(delete-pane) :title "Delete selected pane"}
+              [:i.fa.fa-trash.fa-fw] "Delete"]]]]
+      [:li.dropdown
+       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
+                            :aria-expanded false} "Widgets" [:span.caret]]
+       [:ul.dropdown-menu
+        (doall
+         (for [{:keys [type label icon]} content-types]
+           ^{:key type}
+           [:li [:a {:href "#" :draggable true
+                     :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
+                     :title label}
+                 [:i.fa.fa-fw.fa {:class icon}] label]]))]]]]]])
 
 (defn design-page []
   [:div.row.fill {:style {:padding "0px 20px 90px"}}

@@ -126,3 +126,18 @@
       (go (>! c args)
           (offer! timer :start))
       r)))
+
+(defn handle-keys [key action & more]
+  (let [keys (str/split key #"\s*\+\s*")]
+    (fn [e]
+      (or
+       (when (every? #(case %
+                        "ctrl" (.-ctrlKey e)
+                        "alt" (.-altKey e)
+                        "shift" (.-shiftKey e)
+                        (= (str/upper-case %) (String/fromCharCode (.-keyCode e)))) keys)
+         (.preventDefault e)
+         (action e)
+         true)
+       (if-not (empty? more)
+         (-> handle-keys (apply more) (apply [e])))))))

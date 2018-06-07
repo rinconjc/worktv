@@ -26,8 +26,9 @@
            :content "width=device-width, initial-scale=1"}]
    (include-css (if (env :dev) "/css/site.css" "/css/site.min.css"))
    (include-css (if (env :dev) "/css/splitter.css" "/css/splitter.min.css"))
-   (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css")
-   (include-css "//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css")
+   ;; (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css")
+   (include-css "/css/bootstrap.min.css")
+   (include-css "https://use.fontawesome.com/releases/v5.0.13/css/all.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
    (include-js "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")
    (include-js "https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js")
@@ -51,11 +52,12 @@
 
 (defn extract-urls-from-google-results [html]
   (spit "/tmp/dump.html" html)
-  (let [urls (into {} (for [[_ meta] (re-seq #"<div class=\"rg_meta\">\{([^\}]+)\}" html)]
+  (let [urls (into {} (for [[_ meta] (re-seq #"class=\"rg_meta[^\"]*\">\{([^\}]+)\}" html)]
                         (-> (re-find #"\"id\":\"([^\"]+)\".+\"ou\":\"([^\"]+)\"" meta) rest vec)))]
+    (println "urls:" urls)
     (for [[_ id img] (re-seq #"\[\"([^\"]+)\",\"(data:image[^\"]+)\"\]" html)
           :let [i (str/index-of img "\\u003d")]]
-      {:url (urls id) :image (if i (.substring img 0 i) img)})))
+      {:url (urls id id) :image (if i (.substring img 0 i) img)})))
 
 (defn search-images [q type]
   (-> (client/get "https://www.google.com.au/search"

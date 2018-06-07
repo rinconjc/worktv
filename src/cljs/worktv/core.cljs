@@ -19,7 +19,7 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "Dash" [:i "It"]]]
+     [:a.navbar-brand "DashUp!"]]
     [:navbar.navbar-collapse-collapse {:id "navbar"}
      [:ul.nav.navbar-nav.navbar-left
       (if (session/get :user)
@@ -111,4 +111,6 @@
       (secretary/locate-route path))})
   (accountant/dispatch-current!)
   (mount-root)
-  (js/Handlebars registerHelper "fmt" #()))
+  (js/Handlebars.registerHelper
+   "round" (fn [value opts]
+             (-> value js/Number (.toFixed (-> opts .-hash .-decimals))))))
