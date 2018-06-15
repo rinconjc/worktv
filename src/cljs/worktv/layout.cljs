@@ -16,7 +16,8 @@
              [chart-form modal modal-dialog save-form search-project-form]]
             [cljsjs.mustache]
             [worktv.views :refer [web-page-form]]
-            [worktv.utils :refer [handle-keys]])
+            [worktv.utils :refer [handle-keys]]
+            [worktv.views :refer [slides-form]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def ^:dynamic *edit-mode* true)
@@ -77,6 +78,9 @@
 
 (defmethod content-editor :page [pane]
   [web-page-form pane])
+
+(defmethod content-editor :slides [pane]
+  [slides-form pane])
 
 (defn editor-dialog [pane-id]
   (with-let [model (atom (pane-by-id pane-id))]
@@ -147,13 +151,23 @@
 (defmethod content-view :default [pane]
   [:div.fill "blank content"])
 
+(defmethod content-view :slides [pane]
+  [:div.carousel-slide
+   [:ol.carousel-indicators
+    (for [i (range (:slide-count pane))]
+      ^{:key i}[:li {:data-slide-to i}])
+    [:li {:on-click #(js/console.log "add slide")} [:i.fa.fa-plus-circle]]]
+   (for [slide (:slides pane)] ^{:key (:id slide)}
+     [:div.carousel-inner
+      [:div (pane-view slide)]])])
+
 (defn layout-editor []
   [:div.fill.full
    {:tabIndex 1
     :on-key-down (handle-keys "ctrl+h" #(split-pane :horizontal)
                               "ctrl+v" #(split-pane :vertical)
                               "ctrl+k" #(delete-pane))}
-   @alert
+   ;; @alert
    @modal
    (pane-view (pane-by-id 1))])
 
@@ -223,16 +237,8 @@
         (secretary/dispatch! (str "/show/" (:folder @current-design) "/" (:id @current-design)))
         (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
 
-(defn menu-bar []
-  [:nav.navbar.navbar-default
-   [:div.container-fluid
-    [:div.navbar-header
-     [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
-                                       :aria-expanded false :aria-controls "navbar"}
-      [:span.sr-only "Toggle navigation"]
-      [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand {:href "#"} "MashUpMkr"]]
-    [:navbar.navbar-collapse-collapse
+(defn design-menu []
+  [:navbar.navbar-collapse-collapse
      [:ul.nav.navbar-nav
       [:li [:a {:href "/"} "Home"]]
       [:li.dropdown
@@ -275,7 +281,7 @@
            [:li [:a {:href "#" :draggable true
                      :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
                      :title label}
-                 [:i.fa.fa-fw.fa {:class icon}] label]]))]]]]]])
+                 [:i.fa.fa-fw.fa {:class icon}] label]]))]]]])
 
 (defn design-page []
   [:div.row.fill {:style {:padding "0px 20px 90px"}}

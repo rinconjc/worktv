@@ -11,7 +11,18 @@
 
 ;; -------------------------
 ;; Views
-(defn menu-bar []
+
+(defn default-menu []
+  [:navbar.navbar-collapse-collapse {:id "navbar"}
+   [:ul.nav.navbar-nav.navbar-left
+    (if (session/get :user)
+      [:li [:a {:href "/project"} "Design"]])]
+   [:ul.nav.navbar-nav.navbar-right
+    (if (session/get :user)
+      [:li [:a {:href "/logout"} "Logout"]]
+      [:li [:a {:href "/login"} "Login"]])]])
+
+(defn menu-bar [page-menu]
   [:nav.navbar.navbar-default
    [:div.container-fluid
     [:div.navbar-header
@@ -19,15 +30,8 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "DashUp!"]]
-    [:navbar.navbar-collapse-collapse {:id "navbar"}
-     [:ul.nav.navbar-nav.navbar-left
-      (if (session/get :user)
-        [:li [:a {:href "/project"} "Design"]])]
-     [:ul.nav.navbar-nav.navbar-right
-      (if (session/get :user)
-        [:li [:a {:href "/logout"} "Logout"]]
-        [:li [:a {:href "/login"} "Login"]])]]]])
+     [:a.navbar-brand "MashupBuilder"]]
+    [page-menu]]])
 
 (defn home-page []
   [:div [:h2 "Welcome to worktv"]
@@ -56,10 +60,11 @@
        [:button.btn.btn-primary "Login"]]]]))
 
 (defn current-page []
-  (let [[page menu-bar] (as-> (session/get :current-page) p
-                          (if-not (vector? p) [p menu-bar] p))]
+  (let [[page page-menu] (as-> (session/get :current-page) p
+                           (if-not (vector? p) [(or p #'home-page) default-menu] p))]
+    (js/console.log "page?" (nil? page) " page-menu?" (nil? page-menu))
     [:div.container-fluid.fill.full
-     (if menu-bar [menu-bar])
+     [menu-bar page-menu]
      [:div.row-fluid.fill.full
       [page]]]))
 
@@ -67,10 +72,13 @@
 ;; Routes
 
 (secretary/defroute "/" []
+  (js/console.log "route /")
   (session/put! :current-page #'home-page))
 
 (secretary/defroute "/project" []
-  (session/put! :current-page [#'l/design-page #'l/menu-bar]))
+  (if (session/get :user)
+    (session/put! :current-page [#'l/design-page #'l/design-menu])
+    (accountant/navigate! "/")))
 
 (secretary/defroute "/login" []
   (session/put! :current-page #'login-page))

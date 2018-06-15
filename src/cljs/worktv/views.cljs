@@ -105,7 +105,7 @@
 
 (defn web-page-form [form]
   [:form.form
-   [c/input {:type "test" :label "URL" :placeholder "Past page URL" :model [form :url]}]
+   [c/input {:type "text" :label "URL" :placeholder "Past page URL" :model [form :url]}]
    (if-let [url (:url @form)]
      [:div.full.fill
       [:embed.full.fill {:src url}]])])
@@ -174,3 +174,7 @@
                  (draw (.arrayToDataTable gviz data) #js {:title title :curveType "function"
                                                           :legend #js {:position "bottom"}}))
              (js/console.log "error:" (clj->js error)))))))])
+
+(defn slides-form [form]
+  [:form.form
+   [c/input {:type "number" :label "interval" }]])
