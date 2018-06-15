@@ -5,26 +5,26 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [ring-server "0.4.0"]
-                 [reagent "0.6.0"]
-                 [reagent-utils "0.2.0"]
-                 [ring "1.5.0"]
-                 [ring/ring-defaults "0.2.1"]
-                 [compojure "1.5.2"]
+                 [ring-server "0.5.0"]
+                 [reagent "0.8.1"]
+                 [reagent-utils "0.3.1"]
+                 [ring "1.6.3"]
+                 [ring/ring-defaults "0.3.2"]
+                 [compojure "1.6.1"]
                  [hiccup "1.0.5"]
-                 [yogthos/config "0.8"]
+                 [yogthos/config "1.1"]
                  [org.clojure/clojurescript "1.10.238"
                   :scope "provided"]
                  [secretary "1.2.3"]
-                 [venantius/accountant "0.1.7"
+                 [venantius/accountant "0.2.4"
                   :exclusions [org.clojure/tools.reader]]
-                 [cljs-ajax "0.5.8"]
+                 [cljs-ajax "0.7.3"]
                  [cljsjs/mustache "2.2.1-0"]
                  [commons-ui "0.1.0-SNAPSHOT"]
-                 [org.clojure/core.async "0.2.395"
-                  :exclusions [org.clojure/tools.reader]]
+                 [org.clojure/core.async "0.4.474"
+                  :Exclusions [org.clojure/tools.reader]]
                  [ring/ring-json "0.4.0"]
-                 [clj-http "3.4.1"]
+                 [clj-http "3.9.0"]
                  [cljsjs/firebase "3.5.3-0"]]
 
   :plugins [[lein-environ "1.0.2"]

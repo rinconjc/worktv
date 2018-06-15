@@ -75,7 +75,7 @@
      [:td [c/bare-input {:type "text" :model [form :column]}]]
      [:td [c/bare-input {:type "text" :model [form :label]}]]
      [:td [:button.btn
-           {:on-click #(do (add-fn (:column @form) (:label @form)) (reset! form))}
+           {:on-click #(do (add-fn (:column @form) (:label @form)) (reset! form {}))}
            [:i.fa.fa-plus]]]]))
 
 (defn chart-form [form]
