@@ -1,15 +1,23 @@
 (ns worktv.handler
   (:require [clj-http.client :as client]
-            [compojure
-             [core :refer [context defroutes GET POST]]
-             [route :refer [not-found resources]]]
+            [clojure.string :as str]
+            [compojure.core :refer [context defroutes GET POST]]
+            [compojure.route :refer [not-found resources]]
             [config.core :refer [env]]
             [hiccup.page :refer [html5 include-css include-js]]
-            [ring.middleware
-             [anti-forgery :refer [*anti-forgery-token*]]
-             [json :refer [wrap-json-body wrap-json-response]]]
-            [worktv.middleware :refer [wrap-middleware]]
-            [clojure.string :as str]))
+            [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
+            [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
+            [ring.util.response :refer [redirect]]
+            [worktv.middleware :refer [wrap-middleware]]))
+
+(defn valid-token? [token]
+  true)
+
+(defn wrap-auth [handler]
+  (fn [req]
+    (if (some-> req :cookies "token" :value valid-token?)
+      (handler req)
+      (redirect "/login"))))
 
 (def mount-target
   [:div#app.fill
@@ -75,9 +83,10 @@
                                     result (search-images q type)]
                                 {:body result}))))
       wrap-json-body wrap-json-response)
-  (wrap-csrf-cookie
-   (context "/" []
-            (GET "/*" [] (loading-page))))                 ;
+  (->  (context "/" []
+                (GET "/*" [] (loading-page)))
+       wrap-auth
+       wrap-csrf-cookie)
 
   (resources "/")
   (not-found "Not Found"))
