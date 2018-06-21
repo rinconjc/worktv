@@ -15,7 +15,8 @@
 
 (defn wrap-auth [handler]
   (fn [req]
-    (if (some-> req :cookies "token" :value valid-token?)
+    (if (or (= (:path req) "/login")
+            (some-> req :cookies "token" :value valid-token?))
       (handler req)
       (redirect "/login"))))
 

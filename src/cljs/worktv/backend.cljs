@@ -3,12 +3,18 @@
             [worktv.utils :as u]
             [ajax.core :refer [GET]]
             [clojure.string :as str]
-            [cljsjs.firebase])
+            [cljsjs.firebase]
+            [reagent.session :as session])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
                                                 :authDomain "general-155419.firebaseapp.com"
                                                 :databaseURL "https://general-155419.firebaseio.com/"})))
+
+(defn login-with-email [email expiry]
+  (POST "/api/login" :params {:email email :expiry expiry}
+        :handler #(secreatary/dispatch! "/login-confirm")
+        :error-handler #(session/put! :error %)))
 
 (defn login [user password]
   (let [auth (.auth js/firebase)

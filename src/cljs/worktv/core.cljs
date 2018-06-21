@@ -41,6 +41,10 @@
   [:div [:h2 "About worktv"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
+(defn login-confirm-page []
+  [:div [:h2 "Login"]
+   [:div "A temporary password and link has been sent to your mailbox, please verify your email."]])
+
 (defn login-page []
   (with-let [login (atom nil)
              error (atom nil)]
@@ -82,6 +86,9 @@
 
 (secretary/defroute "/login" []
   (session/put! :current-page #'login-page))
+
+(secretary/defroute "/login-confirm" []
+  (session/put! :current-page #'login-confirm-page))
 
 (secretary/defroute "/logout" []
   (session/remove! :user)
