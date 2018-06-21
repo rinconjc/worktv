@@ -13,7 +13,7 @@
 ;; Views
 
 (defn default-menu []
-  [:navbar.navbar-collapse-collapse {:id "navbar"}
+  [:nav.navbar-collapse-collapse {:id "navbar"}
    [:ul.nav.navbar-nav.navbar-left
     (if (session/get :user)
       [:li [:a {:href "/project"} "Design"]])]
