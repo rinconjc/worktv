@@ -177,4 +177,5 @@
 
 (defn slides-form [form]
   [:form.form
-   [c/input {:type "number" :label "interval" }]])
+   [:div.col-md-4
+    [c/input {:type "number" :label "interval" :model [form :interval]}]]])

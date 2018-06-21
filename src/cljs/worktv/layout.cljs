@@ -92,6 +92,9 @@
   (when (:content-type model)
     (reset! modal [editor-dialog (:id model)])))
 
+(def default-contents
+  {:slides {:slides [{:layout {1 {:id 1 :type :content-pane}}}]}})
+
 (defmulti content-view :content-type)
 
 (defmulti pane-view :type)
@@ -239,49 +242,49 @@
 
 (defn design-menu []
   [:navbar.navbar-collapse-collapse
-     [:ul.nav.navbar-nav
-      [:li [:a {:href "/"} "Home"]]
-      [:li.dropdown
-       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
-                            :aria-expanded false} "Project" [:span.caret]]
-       [:ul.dropdown-menu
-        [:li [:a {:href "#" :title "Open Project" :on-click handle-open-project}
-              "Open"]]
-        [:li [:a {:href "#" :title "New Project"
-                  :on-click #(reset! current-design blank-design)}
-              "New"]]
-        [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
-              "Save"]]
-        [:li [:a {:href "/preview" :title "Preview Project"}
-              "Preview"]]
-        [:li [:a {:href "#" :title "Publish Project"
-                  :on-click #(do (do-publish-project) (.preventDefault %))}
-              "Publish"]]
-        [:li [:a {:href "#" :title "Show Project"
-                  :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
-                                 (.preventDefault %))}
-              "Show"]]]]
-      [:li.dropdown
-       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
-                            :aria-expanded false} "Layout" [:span.caret]]
-       [:ul.dropdown-menu
-        [:li [:a {:href "#" :on-click #(split-pane :vertical) :title "Split pane vertically"}
-              [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]]
-        [:li [:a {:href "#" :on-click #(split-pane :horizontal) :title "Split pane horizontally"}
-              [:i.fa.fa-columns.fa-fw] "Horizontal"]]
-        [:li [:a {:href "#" :on-click #(delete-pane) :title "Delete selected pane"}
-              [:i.fa.fa-trash.fa-fw] "Delete"]]]]
-      [:li.dropdown
-       [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
-                            :aria-expanded false} "Widgets" [:span.caret]]
-       [:ul.dropdown-menu
-        (doall
-         (for [{:keys [type label icon]} content-types]
-           ^{:key type}
-           [:li [:a {:href "#" :draggable true
-                     :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
-                     :title label}
-                 [:i.fa.fa-fw.fa {:class icon}] label]]))]]]])
+   [:ul.nav.navbar-nav
+    [:li [:a {:href "/"} "Home"]]
+    [:li.dropdown
+     [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
+                          :aria-expanded false} "Project" [:span.caret]]
+     [:ul.dropdown-menu
+      [:li [:a {:href "#" :title "Open Project" :on-click handle-open-project}
+            "Open"]]
+      [:li [:a {:href "#" :title "New Project"
+                :on-click #(reset! current-design blank-design)}
+            "New"]]
+      [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
+            "Save"]]
+      [:li [:a {:href "/preview" :title "Preview Project"}
+            "Preview"]]
+      [:li [:a {:href "#" :title "Publish Project"
+                :on-click #(do (do-publish-project) (.preventDefault %))}
+            "Publish"]]
+      [:li [:a {:href "#" :title "Show Project"
+                :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
+                               (.preventDefault %))}
+            "Show"]]]]
+    [:li.dropdown
+     [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
+                          :aria-expanded false} "Layout" [:span.caret]]
+     [:ul.dropdown-menu
+      [:li [:a {:href "#" :on-click #(split-pane :vertical) :title "Split pane vertically"}
+            [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]]
+      [:li [:a {:href "#" :on-click #(split-pane :horizontal) :title "Split pane horizontally"}
+            [:i.fa.fa-columns.fa-fw] "Horizontal"]]
+      [:li [:a {:href "#" :on-click #(delete-pane) :title "Delete selected pane"}
+            [:i.fa.fa-trash.fa-fw] "Delete"]]]]
+    [:li.dropdown
+     [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
+                          :aria-expanded false} "Widgets" [:span.caret]]
+     [:ul.dropdown-menu
+      (doall
+       (for [{:keys [type label icon]} content-types]
+         ^{:key type}
+         [:li [:a {:href "#" :draggable true
+                   :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
+                   :title label}
+               [:i.fa.fa-fw.fa {:class icon}] label]]))]]]])
 
 (defn design-page []
   [:div.row.fill {:style {:padding "0px 20px 90px"}}
