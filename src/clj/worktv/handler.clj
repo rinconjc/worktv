@@ -4,7 +4,9 @@
             [compojure.core :refer [context defroutes GET POST]]
             [compojure.route :refer [not-found resources]]
             [config.core :refer [env]]
+            [hiccup.core :refer [html]]
             [hiccup.page :refer [html5 include-css include-js]]
+            [postal.core :refer [send-message]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.util.response :refer [redirect]]
@@ -75,18 +77,32 @@
                    :headers {"User-Agent" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"}})
       :body extract-urls-from-google-results))
 
+(def api-routes
+  (context "/api" []
+           (POST "/project" [req]
+                 (println "req:" (-> req :body)))
+           (GET "/search" []
+                (fn [req] (let [{:keys [q type]} (-> req :params)
+                                result (search-images q type)]
+                            {:body result})))
+           (POST "/login" []
+                 (fn[req]
+                   (let [{:keys [email expiry]} (:body req)
+                         link (str "https://link")]
+                     (send-message
+                      (env :smtp)
+                      (merge (env :mail)
+                             {:to email :subject "MashupBuilder - Login token"
+                              :body (html [:p
+                                           [:h1 "Welcome!"]
+                                           [:p "Here's your requested an access token to MashupBuilder!"]
+                                           [:a {:href link} link]])})))))))
+
 (defroutes routes
-  (-> (context "/api" []
-               (POST "/project" [req]
-                     (println "req:" (-> req :body)))
-               (GET "/search" []
-                    (fn [req] (let [{:keys [q type]} (-> req :params)
-                                    result (search-images q type)]
-                                {:body result}))))
+  (-> api-routes
       wrap-json-body wrap-json-response)
   (->  (context "/" []
                 (GET "/*" [] (loading-page)))
-       wrap-auth
        wrap-csrf-cookie)
 
   (resources "/")

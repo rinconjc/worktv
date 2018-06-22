@@ -53,14 +53,15 @@
       [:h2 "Login"]
       [:div.row @error]
       [:form.form
-       {:on-submit #(do  (.preventDefault %)
-                         (go
-                           (let [[user, err] (<! (b/login (:username @login) (:password @login)))]
-                             (if err
-                               (reset! error [c/alert "danger" err])
-                               (do (session/put! :user user) (secretary/dispatch! "/"))))))}
+       {:on-submit
+        #(do  (.preventDefault %)
+              (go
+                (let [[user, err] (<! (b/login (:username @login) (:password @login)))]
+                  (if err
+                    (reset! error [c/alert "danger" err])
+                    (do (session/put! :user user) (secretary/dispatch! "/"))))))}
        [c/input {:type "email" :label "Email:" :model [login :username]}]
-       [c/input {:type "password" :label "Password:" :model [login :password]}]
+       ;; [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))
 
 (defn current-page []
