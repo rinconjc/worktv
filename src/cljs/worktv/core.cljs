@@ -29,15 +29,15 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "MashupBuilder"]]
+     [:a.navbar-brand "TeamTv"]]
     [page-menu]]])
 
 (defn home-page []
-  [:div [:h2 "Welcome to worktv"]
+  [:div [:h2 "Welcome to TeamTv"]
    [:div [:a {:href "/project"} "Design a presentation"]]])
 
 (defn about-page []
-  [:div [:h2 "About worktv"]
+  [:div [:h2 "About TeamTv"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
