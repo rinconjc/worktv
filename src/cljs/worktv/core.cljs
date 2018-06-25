@@ -30,15 +30,15 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "MashupBuilder"]]
+     [:a.navbar-brand "TeamTv"]]
     [page-menu]]])
 
 (defn home-page []
-  [:div [:h2 "Welcome to worktv"]
+  [:div [:h2 "Welcome to TeamTv"]
    [:div [:a {:href "/project"} "Design a presentation"]]])
 
 (defn about-page []
-  [:div [:h2 "About worktv"]
+  [:div [:h2 "About TeamTv"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
@@ -54,12 +54,7 @@
       [:div.row @error]
       [:form.form
        {:on-submit
-        #(do  (.preventDefault %)
-              (go
-                (let [[user, err] (<! (b/login (:username @login) (:password @login)))]
-                  (if err
-                    (reset! error [c/alert "danger" err])
-                    (do (session/put! :user user) (secretary/dispatch! "/"))))))}
+        #(b/login-with-email (:username @login))}
        [c/input {:type "email" :label "Email:" :model [login :username]}]
        ;; [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))
