@@ -1,13 +1,12 @@
 (ns worktv.core
   (:require [accountant.core :as accountant]
-            [clojure.core.async :refer [<!]]
             [commons-ui.core :as c]
             [reagent.core :as reagent :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [worktv.backend :as b]
-            [worktv.layout :as l :refer [design-page preview-page]])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+            [worktv.layout :as l :refer [preview-page]]
+            [worktv.utils :refer [event-no-default]]))
 
 ;; -------------------------
 ;; Views
@@ -49,17 +48,11 @@
   (with-let [login (atom nil)
              error (atom nil)]
     [:div.row
-     [:div.col-sm-3.col-sm-offset-4
+     [:div.col-sm-5.col-sm-offset-4
       [:h2 "Login"]
       [:div.row @error]
       [:form.form
-       {:on-submit
-        #(do  (.preventDefault %)
-              (go
-                (let [[user, err] (<! (b/login (:username @login) (:password @login)))]
-                  (if err
-                    (reset! error [c/alert "danger" err])
-                    (do (session/put! :user user) (secretary/dispatch! "/"))))))}
+       {:on-submit (event-no-default #(b/login-with-email (:username @login)))}
        [c/input {:type "email" :label "Email:" :model [login :username]}]
        ;; [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))

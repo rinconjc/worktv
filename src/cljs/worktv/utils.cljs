@@ -141,3 +141,8 @@
          true)
        (if-not (empty? more)
          (-> handle-keys (apply more) (apply [e])))))))
+
+(defn event-no-default [f]
+  (fn [e]
+    (.preventDefault e)
+    (f)))

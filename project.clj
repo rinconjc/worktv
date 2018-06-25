@@ -26,7 +26,8 @@
                  [ring/ring-json "0.4.0"]
                  [clj-http "3.9.0"]
                  [cljsjs/firebase "3.5.3-0"]
-                 [com.draines/postal "2.0.2"]]
+                 [com.draines/postal "2.0.2"]
+                 [org.clojure/core.match "0.3.0-alpha5"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
