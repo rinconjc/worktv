@@ -1,6 +1,8 @@
 (ns worktv.handler
-  (:require [clj-http.client :as client]
+  (:require [buddy.sign.jws :as jwt]
+            [clj-http.client :as client]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [compojure.core :refer [context defroutes GET POST]]
             [compojure.route :refer [not-found resources]]
             [config.core :refer [env]]
@@ -9,16 +11,20 @@
             [postal.core :refer [send-message]]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
-            [ring.util.response :refer [redirect]]
+            [ring.util.response :refer [redirect set-cookie]]
+            [worktv.db :as db]
             [worktv.middleware :refer [wrap-middleware]]))
 
 (defn valid-token? [token]
-  true)
+  (try
+    (String. (jwt/unsign token (env :jwt-secret)))
+    (catch Exception e
+      (log/warn "invalid token " token))))
 
 (defn wrap-auth [handler]
   (fn [req]
-    (if (or (= (:path req) "/login")
-            (some-> req :cookies "token" :value valid-token?))
+    (if (or (some-> req :cookies :auth-token :value valid-token?)
+            (re-matches #"/login|/api/login" (:path req)))
       (handler req)
       (redirect "/login"))))
 
@@ -87,25 +93,36 @@
                             {:body result})))
            (POST "/login" []
                  (fn[req]
-                   (let [{:keys [email expiry]} (:body req)
-                         link (str "https://link")]
+                   (let [{:keys [email expiry] :as body} (:body req)
+                         token (db/login-request body)
+                         link (str (env :base-url "/api/verify?token=" token))]
                      (send-message
                       (env :smtp)
                       (merge (env :mail)
-                             {:to email :subject "MashupBuilder - Login token"
+                             {:to email :subject "TeamTV - Login Token"
                               :body (html [:p
-                                           [:h1 "Welcome!"]
-                                           [:p "Here's your requested an access token to MashupBuilder!"]
-                                           [:a {:href link} link]])})))))))
+                                           [:h1 "Hi there"]
+                                           [:p "Here's your requested one time link to access TeamTV!"]
+                                           [:a {:href link} link]
+                                           [:i "TeamTV"]])})))))
+           (GET "/verify" []
+                (fn[req]
+                  (let [token (-> req :params :email)
+                        user (db/verify-token token)]
+                    (if user
+                      (-> (redirect "/")
+                          (set-cookie :auth-token
+                                      (jwt/sign (:id user) (env :jwt-secret))))
+                      (-> (redirect "/login"))))))))
 
 (defroutes routes
   (-> api-routes
-      wrap-json-body wrap-json-response)
+      wrap-json-body wrap-json-response wrap-auth)
   (->  (context "/" []
                 (GET "/*" [] (loading-page)))
-       wrap-csrf-cookie)
+       wrap-csrf-cookie wrap-auth)
 
   (resources "/")
   (not-found "Not Found"))
 
-(def app (wrap-middleware #'routes))
+(def app (-> #'routes wrap-middleware))
