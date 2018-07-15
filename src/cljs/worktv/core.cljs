@@ -41,8 +41,8 @@
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
-  [:div [:h2 "Login"]
-   [:div "A temporary password and link has been sent to your mailbox, please verify your email."]])
+  [:div [:h2 "Access Link Sent!"]
+   [:div "A secure access link has been sent to your mailbox, please check your email."]])
 
 (defn login-page []
   (with-let [login (atom nil)

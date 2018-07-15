@@ -8,12 +8,17 @@
             [config.core :refer [env]]
             [hiccup.core :refer [html]]
             [hiccup.page :refer [html5 include-css include-js]]
-            [postal.core :refer [send-message]]
+            [postal.core :as postal]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
+            [ring.middleware.cookies :refer [wrap-cookies]]
             [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
-            [ring.util.response :refer [redirect set-cookie]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.util.response :refer [redirect set-cookie status]]
             [worktv.db :as db]
             [worktv.middleware :refer [wrap-middleware]]))
+
+(def JWT_COOKIE "auth-token")
 
 (defn valid-token? [token]
   (try
@@ -23,8 +28,9 @@
 
 (defn wrap-auth [handler]
   (fn [req]
-    (if (or (some-> req :cookies :auth-token :value valid-token?)
-            (re-matches #"/login|/api/login" (:path req)))
+    (log/info "wrap-auth req: " (:uri req) (:cookies req))
+    (if (or (some-> req :cookies (get JWT_COOKIE) :value valid-token?)
+            (re-matches #"/login|/api/login|/api/verify" (:uri req)))
       (handler req)
       (redirect "/login"))))
 
@@ -94,35 +100,51 @@
            (POST "/login" []
                  (fn[req]
                    (let [{:keys [email expiry] :as body} (:body req)
+                         base-url (str (-> req :scheme name) "://"
+                                       (-> req :headers (get "host")))
                          token (db/login-request body)
-                         link (str (env :base-url "/api/verify?token=" token))]
-                     (send-message
+                         link (str base-url "/api/verify?token=" token)]
+                     (postal/send-message
                       (env :smtp)
-                      (merge (env :mail)
-                             {:to email :subject "TeamTV - Login Token"
-                              :body (html [:p
-                                           [:h1 "Hi there"]
-                                           [:p "Here's your requested one time link to access TeamTV!"]
-                                           [:a {:href link} link]
-                                           [:i "TeamTV"]])})))))
+                      {:from (env :mail-from)
+                       :to email :subject "TeamTV - Login Token"
+                       :body
+                       [{:type "text/html"
+                         :content
+                         (html [:p
+                                [:h1 "Hi there"]
+                                [:p "Here's your requested one time link to access TeamTV!"]
+                                [:a {:href link} link]
+                                [:p [:i "TeamTV"]]])}]})
+                     (status {} 204))))
+
            (GET "/verify" []
                 (fn[req]
-                  (let [token (-> req :params :email)
+                  (log/info "verify req:" req)
+                  (let [token (-> req :params :token)
                         user (db/verify-token token)]
+                    (log/info "user found?" user)
                     (if user
                       (-> (redirect "/")
-                          (set-cookie :auth-token
-                                      (jwt/sign (:id user) (env :jwt-secret))))
+                          (set-cookie JWT_COOKIE
+                                      (jwt/sign (str (:id user)) (env :jwt-secret))))
                       (-> (redirect "/login"))))))))
 
 (defroutes routes
-  (-> api-routes
-      wrap-json-body wrap-json-response wrap-auth)
-  (->  (context "/" []
-                (GET "/*" [] (loading-page)))
-       wrap-csrf-cookie wrap-auth)
-
   (resources "/")
+
+  (-> api-routes
+      (wrap-json-body {:keywords? true})
+      wrap-json-response
+      wrap-keyword-params
+      wrap-params
+      wrap-auth
+      wrap-cookies)
+
+  (-> (context "/" []
+               (GET "/*" [] (loading-page)))
+      wrap-middleware wrap-auth)
+
   (not-found "Not Found"))
 
-(def app (-> #'routes wrap-middleware))
+(def app (-> #'routes))

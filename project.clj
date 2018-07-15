@@ -32,7 +32,8 @@
                  [hikari-cp "2.5.0"]
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [buddy "2.0.0"]
-                 [buddy/buddy-sign "2.0.0"]]
+                 [buddy/buddy-sign "2.0.0"]
+                 [org.slf4j/slf4j-simple "1.7.25"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
@@ -94,19 +95,19 @@
 
 
   :profiles {:dev {:repl-options {:init-ns worktv.repl
-                                  :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+                                  :nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
 
                    :dependencies [[ring/ring-mock "0.3.0"]
                                   [ring/ring-devel "1.5.0"]
                                   [prone "1.1.2"]
-                                  [figwheel-sidecar "0.5.10"]
-                                  [org.clojure/tools.nrepl "0.2.12"]
-                                  [com.cemerick/piggieback "0.2.2-SNAPSHOT"]
+                                  [figwheel-sidecar "0.5.16"]
+                                  [org.clojure/tools.nrepl "0.2.13"]
+                                  [cider/piggieback "0.3.6"]
                                   [pjstadig/humane-test-output "0.8.1"]
                                   ]
 
                    :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.5.10"]
+                   :plugins [[lein-figwheel "0.5.16"]
                              ]
 
                    :injections [(require 'pjstadig.humane-test-output)
