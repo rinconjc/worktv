@@ -3,14 +3,16 @@
 
 (def log js/console.log)
 
+(reg-fx 
+  :xhr
+  (fn )
 (reg-event-fx
  :init
  (fn [_ _]
    (log "init event...")
-   (as-> effects {:db {}}
-     (if (.startsWith (-> js/window .-location .-pathname) "/login")
-       (assoc effects :dispatch [:get-user])
-       effects))))
+   (cond-> {:db {}}
+     (cond (.startsWith (-> js/window .-location .-pathname) "/login")
+       (assoc :dispatch [:get-user])))))
 
 (reg-event-db
  :current-page
