@@ -33,7 +33,9 @@
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [buddy "2.0.0"]
                  [buddy/buddy-sign "2.0.0"]
-                 [org.slf4j/slf4j-simple "1.7.25"]]
+                 [org.slf4j/slf4j-simple "1.7.25"]
+                 [re-frame "0.10.5"]
+                 [prismatic/plumbing "0.5.5"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]

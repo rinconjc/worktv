@@ -127,7 +127,10 @@
                     (if user
                       (-> (redirect "/")
                           (set-cookie JWT_COOKIE
-                                      (jwt/sign (str (:id user)) (env :jwt-secret))))
+                                      (jwt/sign (str (:id user)) (env :jwt-secret))
+                                      {:max-age (* 60 60 24 60)
+                                       :http-only true
+                                       :path "/"}))
                       (-> (redirect "/login"))))))))
 
 (defroutes routes
@@ -143,7 +146,7 @@
 
   (-> (context "/" []
                (GET "/*" [] (loading-page)))
-      wrap-middleware wrap-auth)
+      wrap-auth wrap-middleware)
 
   (not-found "Not Found"))
 

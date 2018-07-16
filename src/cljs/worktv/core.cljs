@@ -1,11 +1,14 @@
 (ns worktv.core
   (:require [accountant.core :as accountant]
             [commons-ui.core :as c]
+            [re-frame.core :refer [dispatch subscribe]]
             [reagent.core :as reagent :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [worktv.backend :as b]
+            worktv.events
             [worktv.layout :as l :refer [preview-page]]
+            worktv.subs
             [worktv.utils :refer [event-no-default]]))
 
 ;; -------------------------
@@ -14,10 +17,10 @@
 (defn default-menu []
   [:nav.navbar-collapse-collapse {:id "navbar"}
    [:ul.nav.navbar-nav.navbar-left
-    (if (session/get :user)
+    (if @(subscribe [:user])
       [:li [:a {:href "/project"} "Design"]])]
    [:ul.nav.navbar-nav.navbar-right
-    (if (session/get :user)
+    (if @(subscribe [:user])
       [:li [:a {:href "/logout"} "Logout"]]
       [:li [:a {:href "/login"} "Login"]])]])
 
@@ -58,7 +61,7 @@
        [:button.btn.btn-primary "Login"]]]]))
 
 (defn current-page []
-  (let [[page page-menu] (as-> (session/get :current-page) p
+  (let [[page page-menu] (as-> @(subscribe [:current-page]) p
                            (if-not (vector? p) [(or p #'home-page) default-menu] p))]
     (js/console.log "page?" (nil? page) " page-menu?" (nil? page-menu))
     [:div.container-fluid.fill.full
@@ -70,32 +73,31 @@
 ;; Routes
 
 (secretary/defroute "/" []
-  (js/console.log "route /")
-  (session/put! :current-page #'home-page))
+  (dispatch [:current-page #'home-page]))
 
 (secretary/defroute "/project" []
-  (if (session/get :user)
-    (session/put! :current-page [#'l/design-page #'l/design-menu])
+  (if @(subscribe [:user])
+    (dispatch [:current-page [#'l/design-page #'l/design-menu]])
     (accountant/navigate! "/")))
 
 (secretary/defroute "/login" []
-  (session/put! :current-page #'login-page))
+  (dispatch [:current-page #'login-page]))
 
 (secretary/defroute "/login-confirm" []
-  (session/put! :current-page #'login-confirm-page))
+  (dispatch [:current-page #'login-confirm-page]))
 
 (secretary/defroute "/logout" []
   (session/remove! :user)
-  (session/put! :current-page #'home-page))
+  (dispatch [:current-page #'home-page]))
 
 (secretary/defroute "/about" []
-  (session/put! :current-page #'about-page))
+  (dispatch [:current-page #'about-page]))
 
 (secretary/defroute "/preview" []
-  (session/put! :current-page [#'preview-page nil]))
+  (dispatch [:current-page [#'preview-page nil]]))
 
 (secretary/defroute "/show/:folder/:proj-id" [folder proj-id]
-  (session/put! :current-page #'preview-page)
+  (dispatch [:current-page #'preview-page])
   (l/load-project (str folder "/" proj-id)))
 
 
@@ -119,6 +121,7 @@
     (fn [path]
       (secretary/locate-route path))})
   (accountant/dispatch-current!)
+  (dispatch [:init])
   (mount-root)
   (js/Handlebars.registerHelper
    "round" (fn [value opts]
