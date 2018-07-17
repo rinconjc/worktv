@@ -1,5 +1,5 @@
 (ns worktv.utils
-  (:require [ajax.core :refer [GET]]
+  (:require [ajax.core :refer [default-interceptors GET to-interceptor]]
             [cljs.core.async :refer [>! chan offer! sliding-buffer timeout]]
             [clojure.string :as str])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -146,3 +146,51 @@
   (fn [e]
     (.preventDefault e)
     (f)))
+
+;; ============ hack to handle success empty responses
+(defn empty-means-nil [response]
+  (if (empty? (ajax.protocols/-body response))
+    (reduced [ajax.protocols/-status nil])
+    response))
+
+(def treat-nil-as-empty
+  (to-interceptor {:name "JSON special case nil"
+                   :response empty-means-nil}))
+
+(reset! default-interceptors [treat-nil-as-empty])
+
+;; ============= promise to channel ============
+(defn to-chan [p]
+  (let [ch (chan)]
+    (-> p
+        (.then #(go (>! ch {:ok %})))
+        (.catch #(go (>! ch {:error %}))))
+    ch))
+
+(defn map-chan [ch f]
+  (go (let [{:keys [success] :as r} (<! ch)]
+        (if success {:ok (f success)} r))))
+
+(defn flat-map-chan [ch f]
+  (go (let [{:keys [success] :as r} (<! ch)]
+        (if success (<! (f success)) r))))
+
+;; ========================
+
+(defn async-http
+  "Executes xhr call in background and returns a channel with the
+  results {:ok response} or {:error error}"
+  [method uri opts]
+  (let [ch (chan)]
+    (method uri
+            (assoc opts
+                   :handler #(go
+                               (js/console.log "success " uri)
+                               (>! ch {:ok %}))
+                   :format :json
+                   :response-format :json
+                   :error-handler #(go
+                                     (js/console.log "error" uri %)
+                                     (>! ch {:error (:response %)}))
+                   :keywords? true))
+    ch))

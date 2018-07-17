@@ -1,8 +1,9 @@
 (ns worktv.repl
-  (:use worktv.handler
-        figwheel-sidecar.repl-api
-        ring.server.standalone
-        [ring.middleware file-info file]))
+  (:require [config.core :refer [reload-env]]
+            [ring.middleware.file :refer :all]
+            [ring.middleware.file-info :refer :all]
+            [ring.server.standalone :refer :all]
+            [worktv.handler :refer :all]))
 
 (defonce server (atom nil))
 
@@ -21,6 +22,8 @@
   "used for starting the server in development mode from REPL"
   [& [port]]
   (let [port (if port (Integer/parseInt port) 3000)]
+    (System/setProperty "config" ".config.edn")
+    (reload-env)
     (reset! server
             (serve (get-handler)
                    {:port port
