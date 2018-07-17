@@ -9,45 +9,14 @@
             [secretary.core :as secreatary]
             [reagent.session :as session]
             [cljs.core.match :refer-macros [match]]
-            [secretary.core :as secreatary])
+            [secretary.core :as secreatary]
+            [worktv.utils :refer [async-http]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
                                                 :authDomain "general-155419.firebaseapp.com"
                                                 :databaseURL "https://general-155419.firebaseio.com/"})))
 
-;; ============= promise to channel ============
-(defn to-chan [p]
-  (let [ch (chan)]
-    (-> p
-        (.then #(go (>! ch {:ok %})))
-        (.catch #(go (>! ch {:error %}))))
-    ch))
-
-(defn map-chan [ch f]
-  (go (let [{:keys [success] :as r} (<! ch)]
-        (if success {:ok (f success)} r))))
-
-(defn flat-map-chan [ch f]
-  (go (let [{:keys [success] :as r} (<! ch)]
-        (if success (<! (f success)) r))))
-
-;; ========================
-
-(defn async-http [method uri opts]
-  (let [ch (chan)]
-    (method uri
-            (assoc opts
-                   :handler #(go
-                               (js/console.log "success " uri)
-                               (>! ch {:ok %}))
-                   :format :json
-                   :response-format :json
-                   :error-handler #(go
-                                     (js/console.log "error" uri %)
-                                     (>! ch {:error (:response %)}))
-                   :keywords? true))
-    ch))
 
 (defn login-with-email [email]
   (go

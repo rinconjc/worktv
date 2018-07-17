@@ -28,11 +28,13 @@
 
 (defn wrap-auth [handler]
   (fn [req]
-    (log/info "wrap-auth req: " (:uri req) (:cookies req))
-    (if (or (some-> req :cookies (get JWT_COOKIE) :value valid-token?)
-            (re-matches #"/login|/api/login|/api/verify" (:uri req)))
-      (handler req)
-      (redirect "/login"))))
+    (if-let [id (some-> req :cookies (get JWT_COOKIE) :value valid-token?)]
+      (handler (assoc req :user-id (Integer/parseInt id)))
+      (if (re-matches #"/login|/api/login|/api/verify" (:uri req))
+        (handler req)
+        (if (.startsWith (:uri req) "/api/")
+          (status {:error "Authentication failed"} 403)
+          (redirect "/login"))))))
 
 (def mount-target
   [:div#app.fill
@@ -131,7 +133,12 @@
                                       {:max-age (* 60 60 24 60)
                                        :http-only true
                                        :path "/"}))
-                      (-> (redirect "/login"))))))))
+                      (-> (redirect "/login"))))))
+           (GET "/user" []
+                (fn [req]
+                  (if-let [user (db/find-user {:id (:user-id req)})]
+                    {:body (select-keys user [:email])}
+                    (not-found))))))
 
 (defroutes routes
   (resources "/")

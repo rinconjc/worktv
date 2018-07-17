@@ -1,7 +1,7 @@
 (ns worktv.core
   (:require [accountant.core :as accountant]
             [commons-ui.core :as c]
-            [re-frame.core :refer [dispatch subscribe]]
+            [re-frame.core :refer [dispatch dispatch-sync subscribe]]
             [reagent.core :as reagent :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
@@ -15,14 +15,15 @@
 ;; Views
 
 (defn default-menu []
-  [:nav.navbar-collapse-collapse {:id "navbar"}
-   [:ul.nav.navbar-nav.navbar-left
-    (if @(subscribe [:user])
-      [:li [:a {:href "/project"} "Design"]])]
-   [:ul.nav.navbar-nav.navbar-right
-    (if @(subscribe [:user])
-      [:li [:a {:href "/logout"} "Logout"]]
-      [:li [:a {:href "/login"} "Login"]])]])
+  (with-let [user (subscribe [:user])]
+    [:nav.navbar-collapse-collapse {:id "navbar"}
+     [:ul.nav.navbar-nav.navbar-left
+      (if @user
+        [:li [:a {:href "/project"} "Design"]])]
+     [:ul.nav.navbar-nav.navbar-right
+      (if @user
+        [:li [:a {:href "#"} "ddd"]]
+        [:li [:a {:href "/login"} "Login"]])]]))
 
 (defn menu-bar [page-menu]
   [:nav.navbar.navbar-default
@@ -113,6 +114,7 @@
   (reagent/render [current-page] (.getElementById js/document "app")))
 
 (defn init! []
+  (dispatch-sync [:init])
   (accountant/configure-navigation!
    {:nav-handler
     (fn [path]
@@ -121,7 +123,6 @@
     (fn [path]
       (secretary/locate-route path))})
   (accountant/dispatch-current!)
-  (dispatch [:init])
   (mount-root)
   (js/Handlebars.registerHelper
    "round" (fn [value opts]
