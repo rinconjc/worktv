@@ -12,3 +12,5 @@
  :<- [:user*]
  (fn [user [_]]
    (some-> user (assoc :name (first (str/split (:email user) #"@"))))))
+
+(reg-sub :project-search (fn [db _] (:project-search db)))

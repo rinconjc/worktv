@@ -1,5 +1,5 @@
 (ns worktv.events
-  (:require [ajax.core :refer [GET]]
+  (:require [ajax.core :refer [GET PUT]]
             [cljs.core.async :refer-macros [go]]
             [clojure.core.match :refer-macros [match]]
             [re-frame.core :refer [debug dispatch reg-event-db reg-event-fx reg-fx]]
@@ -9,12 +9,16 @@
 
 (reg-fx
  :xhr
- (fn [{:keys [req dispatch-ok dispatch-error]}]
+ (fn [{:keys [req on-success on-error on-complete]}]
    (go
-     (match [(<! (apply async-http req))]
-            [{:ok resp}] (dispatch (conj dispatch-ok resp))
-            [{:error error}] (when dispatch-error
-                               (dispatch (conj dispatch-error error)))))))
+     (let [resp (<! (apply async-http req))]
+       (match [resp]
+              [{:ok result}] (when on-success
+                               (dispatch (conj on-success result)))
+              [{:error error}] (when on-error
+                                 (dispatch (conj on-error error))))
+       (when on-complete
+         (dispatch (conj on-complete resp)))))))
 
 (reg-fx
  :dispatch-chan
@@ -39,6 +43,11 @@
      (assoc :dispatch [:get-user]))))
 
 (reg-event-db
+ :assoc-in-db
+ (fn [db [_ ks value]]
+   (assoc-in db ks value)))
+
+(reg-event-db
  :current-page
  [debug]
  (fn [db [_ page]]
@@ -49,10 +58,44 @@
  [debug]
  (fn [_ _]
    {:xhr {:req [GET "/api/user"]
-          :dispatch-ok [:user-found]}}))
+          :on-success [:assoc-in-db [:user]]}}))
 
 (reg-event-db
- :user-found
- [debug]
- (fn [db [_ user]]
-   (assoc db :user user)))
+ :open-project-search
+ (fn [db _]
+   (assoc db :project-search {:projects [] :status nil})))
+
+(reg-event-db
+ :close-project-search
+ (fn [db _]
+   (dissoc db :project-search)))
+
+(reg-event-fx
+ :find-projects
+ (fn [{:keys[db]} [_ name]]
+   {:db (assoc-in db [:project-search :status] :in-progress)
+    :xhr {:req [GET "/api/projects" {:params {:name name}}]
+          :on-success [:assoc-in-db [:project-search :projects]]
+          :on-error [:assoc-in-db [:project-search :error ]]
+          :on-complete [:assoc-in-db [:project-search :status] :done]}}))
+
+(reg-event-fx
+ :save-project
+ (fn [_ [_ project]]
+   {:xhr {:req [PUT (str "/api/projects" (:id project)) {:params project}]
+          :on-success [:assoc-in-db [:alert] {:success "Project saved!"}]
+          :on-error [:assoc-in-db [:alert] {:error "Failed to save"}]}}))
+
+(reg-event-fx
+ :load-project
+ (fn [{:keys[db]} [_ project-id]]
+   {:xhr {:req [GET (str "/api/projects/" project-id)]
+          :on-success [:assoc-in-db [:current-project]]
+          :on-error [:assoc-in-db [:alert :error]]}}))
+
+(reg-event-fx
+ :publish-project
+ (fn[_ [_ project-id path]]
+   {:xhr {:req [PUT (str "/projects/" path) {:params {:id project-id}}]
+          :on-success [:assoc-in-db [:alert] {:success (str "Project Published to " path)}]
+          :on-error [:assoc-in-db [:alert :error]]}}))

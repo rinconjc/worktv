@@ -33,15 +33,15 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "TeamTv"]]
+     [:a.navbar-brand "TeamTv7"]]
     [page-menu]]])
 
 (defn home-page []
-  [:div [:h2 "Welcome to TeamTv"]
+  [:div [:h2 "Welcome to TeamTv7"]
    [:div [:a {:href "/project"} "Design a presentation"]]])
 
 (defn about-page []
-  [:div [:h2 "About TeamTv"]
+  [:div [:h2 "About TeamTv7"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
