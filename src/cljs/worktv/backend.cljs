@@ -13,9 +13,9 @@
             [worktv.utils :refer [async-http]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
-                                                :authDomain "general-155419.firebaseapp.com"
-                                                :databaseURL "https://general-155419.firebaseio.com/"})))
+;; (defonce f (js/firebase.initializeApp (clj->js {:apiKey "AIzaSyB-uyzpSf21QlMc9oAlXD82Dv6HuqHsb8U"
+;;                                                 :authDomain "general-155419.firebaseapp.com"
+;;                                                 :databaseURL "https://general-155419.firebaseio.com/"})))
 
 
 (defn login-with-email [email]
@@ -24,15 +24,15 @@
            [{:ok _}] (secreatary/dispatch! "/login-confirm")
            [{:error error}] (session/put! :error error))))
 
-(defn login [user password]
-  (let [auth (.auth js/firebase)
-        ch (chan)]
-    (.onAuthStateChanged auth #(if % (go (>! ch [%]))))
-    (-> auth (.signInWithEmailAndPassword user password)
-        (.catch #(do
-                   (js/console.log "error?" %)
-                   (go (>! ch [nil, (.-message %)])))))
-    ch))
+;; (defn login [user password]
+;;   (let [auth (.auth js/firebase)
+;;         ch (chan)]
+;;     (.onAuthStateChanged auth #(if % (go (>! ch [%]))))
+;;     (-> auth (.signInWithEmailAndPassword user password)
+;;         (.catch #(do
+;;                    (js/console.log "error?" %)
+;;                    (go (>! ch [nil, (.-message %)])))))
+;;     ch))
 
 (defn save-project [project]
   (let [ch (chan)

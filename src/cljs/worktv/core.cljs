@@ -22,7 +22,7 @@
         [:li [:a {:href "/project"} "Design"]])]
      [:ul.nav.navbar-nav.navbar-right
       (if @user
-        [:li [:a {:href "#"} "ddd"]]
+        [:li [:a {:href "#"} (:name @user)]]
         [:li [:a {:href "/login"} "Login"]])]]))
 
 (defn menu-bar [page-menu]

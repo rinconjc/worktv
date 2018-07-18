@@ -5,11 +5,10 @@
 
 (reg-sub :current-page (fn [db _] (:current-page db)))
 
-(reg-sub :_user (fn [db _] (:user db)))
+(reg-sub :user* (fn [db _] (:user db)))
 
 (reg-sub
  :user
- :<- [:_user]
- (fn [[user] [_]]
-   (js/console.log "user:" user)
+ :<- [:user*]
+ (fn [user [_]]
    (some-> user (assoc :name (first (str/split (:email user) #"@"))))))
