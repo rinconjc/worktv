@@ -3,7 +3,7 @@
             [clj-http.client :as client]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [compojure.core :refer [context defroutes GET POST]]
+            [compojure.core :refer [context defroutes GET POST PUT]]
             [compojure.route :refer [not-found resources]]
             [config.core :refer [env]]
             [hiccup.core :refer [html]]
@@ -20,16 +20,24 @@
 
 (def JWT_COOKIE "auth-token")
 
+(def active-users (atom #{}))
+
 (defn valid-token? [token]
   (try
-    (String. (jwt/unsign token (env :jwt-secret)))
+    (let [id (-> (jwt/unsign token (env :jwt-secret))
+                 (String.)
+                 (Integer/parseInt))]
+      (if (@active-users id) id
+          (when (db/find-user {:id id})
+            (swap! active-users conj id)
+            id)))
     (catch Exception e
       (log/warn "invalid token " token))))
 
 (defn wrap-auth [handler]
   (fn [req]
     (if-let [id (some-> req :cookies (get JWT_COOKIE) :value valid-token?)]
-      (handler (assoc req :user-id (Integer/parseInt id)))
+      (handler (assoc req :user-id id))
       (if (re-matches #"/login|/api/login|/api/verify" (:uri req))
         (handler req)
         (if (.startsWith (:uri req) "/api/")
@@ -93,12 +101,28 @@
 
 (def api-routes
   (context "/api" []
-           (POST "/project" [req]
-                 (println "req:" (-> req :body)))
+           (POST "/projects" []
+                 (fn [req]
+                   {:body (db/create-project (assoc (:body req) :owner (:user-id req)))}))
+
+           (GET "/projects" []
+                (fn [req]
+                  {:body (db/find-projects (:params req))}))
+
+           (GET "/projects/:project-id" [project-id]
+                (fn [req]
+                  {:body (db/get-project project-id)}))
+
+           (PUT "/projects/:project-id" [project-id]
+                (fn [req]
+                  {:body (db/update-project
+                          project-id (assoc (:body req) :owner (:user-id req)))}))
+
            (GET "/search" []
                 (fn [req] (let [{:keys [q type]} (-> req :params)
                                 result (search-images q type)]
                             {:body result})))
+
            (POST "/login" []
                  (fn[req]
                    (let [{:keys [email expiry] :as body} (:body req)
@@ -138,7 +162,7 @@
                 (fn [req]
                   (if-let [user (db/find-user {:id (:user-id req)})]
                     {:body (select-keys user [:email])}
-                    (not-found))))))
+                    (not-found {:error "user not found"}))))))
 
 (defroutes routes
   (resources "/")

@@ -5,12 +5,13 @@
             [reagent.core :as reagent :refer [atom] :refer-macros [with-let]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
-            [worktv.backend :as b]
-            worktv.events
+            [worktv.events :refer [init-events]]
             [worktv.layout :as l :refer [preview-page]]
-            worktv.subs
+            [worktv.subs :refer [init-subs]]
             [worktv.utils :refer [event-no-default]]))
 
+(init-events)
+(init-subs)
 ;; -------------------------
 ;; Views
 
@@ -50,13 +51,13 @@
 
 (defn login-page []
   (with-let [login (atom nil)
-             error (atom nil)]
+             error (subscribe [:error])]
     [:div.row
      [:div.col-sm-5.col-sm-offset-4
       [:h2 "Login"]
-      [:div.row @error]
+      ;; [:div.row [c/alert-box @error]]
       [:form.form
-       {:on-submit (event-no-default #(b/login-with-email (:username @login)))}
+       {:on-submit (event-no-default #(dispatch [:login-with-email (:username @login)]))}
        [c/input {:type "email" :label "Email:" :model [login :username]}]
        ;; [c/input {:type "password" :label "Password:" :model [login :password]}]
        [:button.btn.btn-primary "Login"]]]]))

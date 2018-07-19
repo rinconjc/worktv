@@ -1,9 +1,13 @@
 (ns worktv.events
-  (:require [ajax.core :refer [GET PUT]]
+  (:require [ajax.core :refer [GET POST PUT]]
             [cljs.core.async :refer-macros [go]]
             [clojure.core.match :refer-macros [match]]
             [re-frame.core :refer [debug dispatch reg-event-db reg-event-fx reg-fx]]
+            [secretary.core :as secretary]
             [worktv.utils :refer [async-http]]))
+
+(defn init-events
+  "noop function to make a dummy require entry" [])
 
 (def log js/console.log)
 
@@ -19,6 +23,11 @@
                                  (dispatch (conj on-error error))))
        (when on-complete
          (dispatch (conj on-complete resp)))))))
+
+(reg-fx
+ :route
+ (fn [route]
+   (secretary/dispatch! route)))
 
 (reg-fx
  :dispatch-chan
@@ -47,11 +56,20 @@
  (fn [db [_ ks value]]
    (assoc-in db ks value)))
 
+(reg-event-fx :route (fn [_ [_ route]] {:route route}))
+
 (reg-event-db
  :current-page
  [debug]
  (fn [db [_ page]]
    (assoc db :current-page page)))
+
+(reg-event-fx
+ :login-with-email
+ (fn [_ [_ email]]
+   {:xhr {:req [POST "/api/login" {:params {:email email}}]
+          :on-success [:route "/login-confirm"]
+          :on-error [:assoc-in-db [:alert :error]]}}))
 
 (reg-event-fx
  :get-user

@@ -55,5 +55,23 @@
 (defn verify-token [token]
   (let [id (id-from-token token)]
     (when (= 1 (first (jdbc/update! @db-spec "app_users" {:random_token nil}
-                                  ["id = ? and random_token = ?" id token])))
+                                    ["id = ? and random_token = ?" id token])))
       (find-user {:id id}))))
+
+(defn create-project [proj]
+  (first (jdbc/insert! @db-spec "projects"
+                       (-> proj (select-keys [:owner :content :name])
+                           (update :content pr-str)))))
+
+(defn find-projects [{:keys [name]}]
+  (jdbc/query @db-spec ["select id, name from projects where name like ? order by create_at desc"
+                        name]))
+
+(defn get-project [proj-id]
+  (first (jdbc/query @db-spec ["select * from projects where id=?" proj-id])))
+
+(defn update-project [proj-id proj]
+  (first (jdbc/update! @db-spec "projects"
+                 (-> proj (select-keys [:name :content])
+                     (update :content pr-str))
+                 ["owner=? and id=?" (:owner proj) proj-id])))
