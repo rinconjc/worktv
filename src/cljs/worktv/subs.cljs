@@ -7,6 +7,8 @@
 
 (reg-sub :current-page (fn [db _] (:current-page db)))
 
+(reg-sub :modal (fn [db _] (:modal db)))
+
 (reg-sub :user* (fn [db _] (:user db)))
 
 (reg-sub
@@ -26,3 +28,9 @@
    (cond
      (string? error) error
      (map? error) :error)))
+
+(reg-sub :current-project (fn [db _] (:current-project db)))
+
+(reg-sub :pane-dialog (fn [db _] (:pane-dialog db)))
+
+(reg-sub :selected-pane-id (fn [db _]) (:selected-pane db))

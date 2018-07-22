@@ -1,9 +1,10 @@
 (ns worktv.db
-  (:require [clojure.java.jdbc :as jdbc]
+  (:require [clojure.edn :as edn]
+            [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
             [hikari-cp.core :as cp]
             [ragtime.jdbc :as r]
-            [ragtime.repl :as rr]
-            [clojure.string :as str])
+            [ragtime.repl :as rr])
   (:import java.nio.ByteBuffer
            java.security.SecureRandom
            java.util.Base64))
@@ -68,7 +69,9 @@
                         name]))
 
 (defn get-project [proj-id]
-  (first (jdbc/query @db-spec ["select * from projects where id=?" proj-id])))
+  (some->
+   (first (jdbc/query @db-spec ["select * from projects where id=?" proj-id]))
+   (update :content edn/read-string)))
 
 (defn update-project [proj-id proj]
   (first (jdbc/update! @db-spec "projects"

@@ -10,6 +10,8 @@
             [reagent.session :as session]
             [cljs.core.match :refer-macros [match]]
             [secretary.core :as secreatary]
+            [worktv.utils :refer [async-http]]
+            [ajax.core :refer [PUT]]
             [worktv.utils :refer [async-http]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
@@ -24,6 +26,9 @@
            [{:ok _}] (secreatary/dispatch! "/login-confirm")
            [{:error error}] (session/put! :error error))))
 
+(defn get-user []
+  (async-http GET "/api/user"))
+
 ;; (defn login [user password]
 ;;   (let [auth (.auth js/firebase)
 ;;         ch (chan)]
@@ -35,42 +40,16 @@
 ;;     ch))
 
 (defn save-project [project]
-  (let [ch (chan)
-        db (.database js/firebase)
-        dir (str "projects/" (:folder project))
-        id (or (:id project) (-> db (.ref dir) .push .-key))]
-    (-> db (.ref (str dir "/" id)) (.set (-> project (dissoc :id) clj->js))
-        (.then #(go (>! ch id)))
-        (.catch #(go (>! ch {:error %}))))
-    ch))
+  (async-http PUT (str "/api/projects" (:id project)) {:params project}))
 
-(defn find-projects [user-id]
-  (let [db (.database js/firebase)
-        ch (chan)]
-    (-> db (.ref (str "projects/public"))
-        (.once "value" (fn [snapshot]
-                         (go
-                           (let [ps (transient {})]
-                             (.forEach snapshot #(and (assoc! ps (.-key %) (.val %)) nil))
-                             (>! ch (persistent! ps)))))))
-    ch))
+(defn find-projects [name]
+  (async-http GET "/api/projects" {:params {:name name}}))
 
-(defn get-project [path]
-  (let [db (.database js/firebase)
-        ch (chan)]
-    (-> db (.ref (str "projects/" path))
-        (.once "value") (.then #(go (>! ch [(-> % .val)]))))
-    ch))
+(defn get-project [id]
+  (async-http GET (str "/api/projects/" id)))
 
-(defn publish-project [user-key {:keys [id name folder]}]
-  (let [db (.database js/firebase)
-        path (str "published/" (if (= "public" folder) "public" user-key) "/" id)
-        ch (chan)]
-    (-> db (.ref path)
-        (.set #js {:name name :date (js/Date.)})
-        (.then #(go (>! ch [path])))
-        (.catch #(go (>! ch [nil %]))))
-    ch))
+(defn publish-project [proj-id, path]
+  (async-http POST (str "/api/publishings") {:params {:project-id proj-id :path path}}))
 
 (defn extract-urls-from-google-results [html]
   (for [[_ url] (re-seq #"\"ou\":\"([^\"]\+)\"" html)] url))

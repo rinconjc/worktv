@@ -2,8 +2,9 @@
   (:require [ajax.core :refer [GET POST PUT]]
             [cljs.core.async :refer-macros [go]]
             [clojure.core.match :refer-macros [match]]
-            [re-frame.core :refer [debug dispatch reg-event-db reg-event-fx reg-fx]]
+            [re-frame.core :refer [dispatch reg-event-db reg-event-fx reg-fx]]
             [secretary.core :as secretary]
+            [worktv.layout :as db]
             [worktv.utils :refer [async-http]]))
 
 (defn init-events
@@ -45,7 +46,6 @@
 
 (reg-event-fx
  :init
- [debug]
  (fn [{:keys[db]} _]
    (cond-> {:db db}
      (not (.startsWith (-> js/window .-location .-pathname) "/login"))
@@ -60,7 +60,6 @@
 
 (reg-event-db
  :current-page
- [debug]
  (fn [db [_ page]]
    (assoc db :current-page page)))
 
@@ -73,7 +72,6 @@
 
 (reg-event-fx
  :get-user
- [debug]
  (fn [_ _]
    {:xhr {:req [GET "/api/user"]
           :on-success [:assoc-in-db [:user]]}}))
@@ -82,6 +80,18 @@
  :open-project-search
  (fn [db _]
    (assoc db :project-search {:projects [] :status nil})))
+
+(reg-event-db
+ :project-search-select
+ (fn [db [_ id]]
+   (assoc-in db [:project-search :selected] id)))
+
+(reg-event-fx
+ :open-project
+ (fn [{:keys[db]} [_ id]]
+   (when-let [id  (or id (get-in db [:project-search :selected]))]
+     {:dispatch-n [[:load-project id]
+                   [:close-modal]]})))
 
 (reg-event-db
  :close-project-search
@@ -99,10 +109,19 @@
 
 (reg-event-fx
  :save-project
- (fn [_ [_ project]]
-   {:xhr {:req [PUT (str "/api/projects" (:id project)) {:params project}]
-          :on-success [:assoc-in-db [:alert] {:success "Project saved!"}]
-          :on-error [:assoc-in-db [:alert] {:error "Failed to save"}]}}))
+ (fn [{:keys[db]} [_ info]]
+   (let [proj (merge (:current-project db) info)]
+     {:xhr {:req (if (:id proj)
+                   [PUT (str "/api/projects" (:id proj)) {:params proj}]
+                   [POST "/api/projects" {:params proj}])
+            :on-success [:project-saved]
+            :on-error [:assoc-in-db [:alert] {:error "Failed to save"}]}})))
+
+(reg-event-db
+ :project-saved
+ (fn [db [_ {:keys [id]}]]
+   (cond-> (assoc db :alert {:success "Project saved!"})
+     (some? id) (assoc-in [:current-project :id] id))))
 
 (reg-event-fx
  :load-project
@@ -117,3 +136,69 @@
    {:xhr {:req [PUT (str "/projects/" path) {:params {:id project-id}}]
           :on-success [:assoc-in-db [:alert] {:success (str "Project Published to " path)}]
           :on-error [:assoc-in-db [:alert :error]]}}))
+
+(reg-event-fx
+ :new-project
+ (fn [{:keys [db]} _]
+   {:db (assoc db :current-project (db/blank-design))
+    :route "/project"}))
+
+(reg-event-db
+ :update-pane
+ (fn [db [_ pane]]
+   (update-in [:current-project :layout] assoc (:id pane) pane)))
+
+(reg-event-db
+ :edit-pane
+ (fn [db [_ pane]]
+   (assoc db :pane-dialog pane)))
+
+(reg-event-db
+ :modal
+ (fn [db [_ data]]
+   (assoc db :modal data)))
+
+(reg-event-db
+ :close-modal
+ (fn[db _]
+   (dissoc db :modal)))
+
+(reg-event-db
+ :select-pane
+ (fn [db [_ id]]
+   (if (= id (:selected-pane db))
+     (dissoc db :selected-pane)
+     (assoc db :selected-pane id))))
+
+(defn selected-pane [db]
+  (some->> (:selected-pane db)
+           (get (get-in db [:current-project :layout]))))
+
+(reg-event-db
+ :split-pane
+ (fn [db [_ orientation]]
+   (if-let [pane (selected-pane db)]
+     (let [pane1-id (-> pane :id (* 10) inc)
+           pane2-id (inc pane1-id)]
+       (-> db
+           (update :current-project update :layout assoc
+                   (:id pane) {:id (:id pane) :type :container-pane :orientation orientation
+                               :pane1 pane1-id :pane2 pane2-id}
+                   pane1-id (merge pane {:id pane1-id :type :content-pane})
+                   pane2-id {:id pane2-id :type :content-pane})
+           (dissoc :selected-pane)))
+     (assoc db :alert {:error "Please select the pane to split first"
+                       :fade-after 5}))))
+
+(reg-event-db
+ :delete-pane
+ (fn [db _]
+   (if-let [pane-id (:selected-pane db)]
+     (let [parent-id (quot pane-id 10)
+           sibling (-> db :current-project :layout
+                       (get (if (odd? pane-id) (inc pane-id) (dec pane-id))))]
+       (-> db (update-in [:current-project :layout]
+                        #(-> % (assoc parent-id (assoc sibling :id parent-id))
+                             (dissoc pane-id (inc pane-id) (dec pane-id))))
+           (dissoc :selected-pane)))
+     (assoc db :alert {:error "Please select the pane to split first" :fade-after 5}))))

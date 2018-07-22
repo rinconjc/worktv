@@ -17,8 +17,15 @@
             [cljsjs.mustache]
             [worktv.views :refer [web-page-form]]
             [worktv.utils :refer [handle-keys]]
-            [worktv.views :refer [slides-form]])
+            [worktv.views :refer [slides-form]]
+            [re-frame.core :refer [subscribe]]
+            [worktv.subs :refer [init-subs]]
+            [worktv.events :refer [init-events]]
+            [re-frame.core :refer [dispatch]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
+
+(init-subs)
+(init-events)
 
 (def ^:dynamic *edit-mode* true)
 
@@ -31,16 +38,16 @@
 
 (def blank-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"})
 
-(def current-design
-  (let [model (session/cursor [:current-design])]
-    (when-not @model
-      (session/put! :current-design blank-design))
-    model))
+(def current-design (subscribe [:current-project]))
+;; (def current-design
+;;   (let [model (session/cursor [:current-design])]
+;;     (when-not @model
+;;       (session/put! :current-design blank-design))
+;;     model))
 
-(def selected-pane-id (atom nil))
+;; (def selected-pane-id (atom nil))
 (def alert (atom nil))
 
-(declare split-pane delete-pane)
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -49,12 +56,6 @@
 
 (defn pane-by-id [id]
   (-> @current-design :layout (get id)))
-
-(defn selected-pane []
-  (if @selected-pane-id (-> @current-design :layout (get @selected-pane-id))))
-
-(defn is-selected [pane]
-  (= (:id pane) @selected-pane-id))
 
 (defn update-pane [pane]
   (swap! current-design update :layout assoc (:id pane) pane)
@@ -82,15 +83,15 @@
 (defmethod content-editor :slides [pane]
   [slides-form pane])
 
-(defn editor-dialog [pane-id]
-  (with-let [model (atom (pane-by-id pane-id))]
-    [modal-dialog {:title (str "Edit " (-> @model :content-type name) " details")
-                   :ok-fn #(go (update-pane @model))}
-     (content-editor model)]))
+(defn editor-dialog [pane]
+  (with-let [model (atom pane)]
+    {:title (str "Edit " (-> @model :content-type name) " details")
+     :ok-event [:update-pane @model]
+     :content (content-editor model)}))
 
-(defn show-editor [model]
-  (when (:content-type model)
-    (reset! modal [editor-dialog (:id model)])))
+(defn show-editor [pane]
+  (when (:content-type pane)
+    (dispatch [:modal (editor-dialog pane)])))
 
 (def default-contents
   {:slides {:slides [{:layout {1 {:id 1 :type :content-pane}}}]}})
@@ -102,17 +103,14 @@
 (defmethod pane-view :content-pane [pane]
   [:div.fill.full
    (if *edit-mode*
-     {:on-click #(do
-                   (reset! selected-pane-id (if (is-selected pane) nil (:id pane)))
-                   false)
+     {:on-click #(dispatch [:select-pane (:id pane)])
       :on-double-click #(do (.preventDefault %) (show-editor pane))
       :on-drag-over #(.preventDefault %)
       :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
       :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
       :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
-      :on-drop #(show-editor
-                 (update-pane (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword))))
-      :class (if (is-selected pane)  "selected-pane")})
+      :on-drop #(show-editor (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))
+      :class (when (= (:id pane) @(subscribe [:selected-pane-id]))  "selected-pane")})
    (content-view pane)])
 
 (defmethod pane-view :container-pane [{:keys [pane1 pane2] :as opts}]
@@ -167,71 +165,20 @@
 (defn layout-editor []
   [:div.fill.full
    {:tabIndex 1
-    :on-key-down (handle-keys "ctrl+h" #(split-pane :horizontal)
-                              "ctrl+v" #(split-pane :vertical)
-                              "ctrl+k" #(delete-pane))}
+    :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
+                              "ctrl+v" #(dispatch [:split-pane :vertical])
+                              "ctrl+k" #(dispatch [:delete-pane]))}
    ;; @alert
-   @modal
+   [modal-dialog]
    (pane-view (pane-by-id 1))])
 
-(defn split-pane [orientation]
-  (if-let [pane (selected-pane)]
-    (let [pane1-id (-> pane :id (* 10) inc)
-          pane2-id (inc pane1-id)]
-      (swap! current-design update :layout assoc
-             (:id pane) {:id (:id pane) :type :container-pane :orientation orientation
-                         :pane1 pane1-id :pane2 pane2-id}
-             pane1-id (merge pane {:id pane1-id :type :content-pane})
-             pane2-id {:id pane2-id :type :content-pane})
-      (reset! selected-pane-id nil))
-    (reset! alert (c/alert {:type "danger" :fade-after 5}
-                           "Please select the pane to split first"))))
-
-(defn delete-pane []
-  (if-let [pane-id @selected-pane-id]
-    (let [parent-id (quot pane-id 10)
-          sibling (-> @current-design :layout
-                      (get (if (odd? pane-id) (inc pane-id) (dec pane-id))))]
-      (update-pane (assoc sibling :id parent-id))
-      (swap! current-design update :layout dissoc pane-id (inc pane-id) (dec pane-id))
-      (reset! selected-pane-id nil))
-    (reset! alert ["danger" "Please select the pane to split first"])))
-
-(defn save-project [form]
-  (let [ch (chan)]
-    (go (let [result (<! (b/save-project
-                          (-> @current-design (update :layout pr-str)
-                              (merge form))))]
-          (when-not (:error result)
-            (swap! current-design assoc :id result)
-            (reset! alert (c/alert {:type "success" :fade-after 6} "Project saved")))
-          (>! ch result)))
-    ch))
-
 (defn handle-save-project []
-  (if (:id @current-design) (save-project nil)
-      (reset! modal (with-let [form (atom {})]
-                      [modal-dialog {:title "Save Design..." :ok-fn #(save-project @form)}
-                       [save-form form]]))))
-
-(defn load-project
-  ([path] (go (let [[data error] (<! (b/get-project path))]
-                (if data (load-project nil data)))))
-  ([key proj-data]
-   (if-not proj-data {:error "Select a project!"}
-           (reset! current-design
-                   (-> proj-data
-                       (js->clj :keywordize-keys true)
-                       (update :layout read-string)
-                       (assoc :id key))))))
-
-(defn handle-open-project []
-  (go
-    (let [projs (<! (b/find-projects (.-uid (session/get :user))))
-          selection (atom nil)]
-      (reset! modal [modal-dialog {:title "Open a design..."
-                                   :ok-fn #(go (apply load-project @selection))}
-                     [search-project-form projs selection]]))))
+  (if (:id @current-design)
+    (dispatch [:save-project])
+    (let [data (atom {})]
+      (dispatch [:modal {:title "Save Design"
+                         :content [save-form data]
+                         :ok-event [:save-project @data]}]))))
 
 (defn do-publish-project []
   (go
@@ -241,17 +188,21 @@
         (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
 
 (defn design-menu []
-  [:navbar.navbar-collapse-collapse
+  [:nav.navbar-collapse-collapse
    [:ul.nav.navbar-nav
     [:li [:a {:href "/"} "Home"]]
     [:li.dropdown
      [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
                           :aria-expanded false} "Project" [:span.caret]]
      [:ul.dropdown-menu
-      [:li [:a {:href "#" :title "Open Project" :on-click handle-open-project}
+      [:li [:a {:href "#" :title "Open Project"
+                :on-click #(dispatch
+                            [:modal {:title "Open Project"
+                                     :ok-event [:open-project]
+                                     :content [search-project-form]}])}
             "Open"]]
       [:li [:a {:href "#" :title "New Project"
-                :on-click #(reset! current-design blank-design)}
+                :on-click #(dispatch [:new-project])}
             "New"]]
       [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
             "Save"]]
@@ -268,11 +219,11 @@
      [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
                           :aria-expanded false} "Layout" [:span.caret]]
      [:ul.dropdown-menu
-      [:li [:a {:href "#" :on-click #(split-pane :vertical) :title "Split pane vertically"}
+      [:li [:a {:href "#" :on-click #(dispatch [:split-pane :vertical]) :title "Split pane vertically"}
             [:i.fa.fa-columns.fa-fw.fa-rotate-270] "Vertical"]]
-      [:li [:a {:href "#" :on-click #(split-pane :horizontal) :title "Split pane horizontally"}
+      [:li [:a {:href "#" :on-click #(dispatch [:split-pane :horizontal]) :title "Split pane horizontally"}
             [:i.fa.fa-columns.fa-fw] "Horizontal"]]
-      [:li [:a {:href "#" :on-click #(delete-pane) :title "Delete selected pane"}
+      [:li [:a {:href "#" :on-click #(dispatch [:delete-pane]) :title "Delete selected pane"}
             [:i.fa.fa-trash.fa-fw] "Delete"]]]]
     [:li.dropdown
      [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true

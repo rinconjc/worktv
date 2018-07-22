@@ -4,7 +4,8 @@
             [commons-ui.core :as c]
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
             [worktv.utils :as u]
-            [worktv.backend :as b])
+            [worktv.backend :as b]
+            [re-frame.core :refer [subscribe]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -33,23 +34,22 @@
               (reset! content [c/alert {:type "danger"} (or error "unknown error")])))))
     content))
 
-(defn modal-dialog [{:keys [title ok-fn close-fn]} content]
-  (with-let [error (atom nil)]
-    [:div.modal {:style {:display "block"} :tabIndex -1}
-     [:div.modal-dialog
-      [:div.modal-content
-       [:div.modal-header [:h4 title]]
-       [:div.modal-body
-        @error
-        content]
-       [:div.modal-footer
-        (if (fn? ok-fn)
-          [:button.btn.btn-primary
-           {:on-click #(go (if-let [err (-> (<! (ok-fn)) :error)]
-                             (reset! error (c/alert {:type :danger} err))
-                             (reset! modal nil)))} "OK"])
-        [:button.btn {:on-click #(do (reset! modal nil)
-                                     (if (fn? close-fn) (close-fn)) )} "Close"]]]]]))
+(defn modal-dialog []
+  (with-let [modal (subscribe [:modal])]
+    (when-let [{:keys [title ok-event content]} @modal]
+      [:div.modal {:style {:display "block"} :tabIndex -1}
+       [:div.modal-dialog
+        [:div.modal-content
+         [:div.modal-header [:h4 title]]
+         [:div.modal-body
+          (when (:error @modal)
+            [c/alert (:error @modal)])
+          content]
+         [:div.modal-footer
+          (if ok-event
+            [:button.btn.btn-primary
+             {:on-click #(dispatch ok-event)} "OK"])
+          [:button.btn {:on-click #(dispatch [:close-modal])} "Close"]]]]])))
 
 (defn save-form [data]
   [:form.form
@@ -60,14 +60,15 @@
    [c/input {:type "textarea" :id "description" :label "Description:" :rows 3
              :model [data :description]}]])
 
-(defn search-project-form [projs selection]
-  [:form.form
-   [:div.list-group
-    (doall
-     (for [[k v] (take 10 projs)]
-       ^{:key k}[:a.list-group-item {:href "#" :on-click #(reset! selection [k v])}
-                 [:h4.list-group-item-heading (.-name v)]
-                 [:p.list-group-item-text (.-description v)]]))]])
+(defn search-project-form []
+  (with-let [proj-search (subscribe [:project-search])]
+    [:form.form
+     [:div.list-group
+      (doall
+       (for [{:keys [id name description]} (:projects @proj-search)]
+         ^{:key id}[:a.list-group-item {:href "#" :on-click #(dispatch [:project-search-select id])}
+                   [:h4.list-group-item-heading name]
+                   [:p.list-group-item-text description]]))]]))
 
 (defn y-serie-form [add-fn]
   (with-let [form (atom {})]
