@@ -4,7 +4,7 @@
             [clojure.core.match :refer-macros [match]]
             [re-frame.core :refer [dispatch reg-event-db reg-event-fx reg-fx]]
             [secretary.core :as secretary]
-            [worktv.layout :as db]
+            [worktv.db :as db]
             [worktv.utils :refer [async-http]]))
 
 (defn init-events
@@ -138,10 +138,11 @@
           :on-error [:assoc-in-db [:alert :error]]}}))
 
 (reg-event-fx
- :new-project
- (fn [{:keys [db]} _]
-   {:db (assoc db :current-project (db/blank-design))
-    :route "/project"}))
+ :design
+ (fn [{:keys [db]} [_ new?]]
+   (cond-> {:route "/project" :db db}
+     (or new? (nil? (:current-project db)))
+     (update :db assoc :current-project db/blank-design))))
 
 (reg-event-db
  :update-pane

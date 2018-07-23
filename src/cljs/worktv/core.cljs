@@ -20,7 +20,7 @@
     [:nav.navbar-collapse-collapse {:id "navbar"}
      [:ul.nav.navbar-nav.navbar-left
       (if @user
-        [:li [:a {:href "/project"} "Design"]])]
+        [:li [:a {:href "#" :on-click #(dispatch [:design])} "Design"]])]
      [:ul.nav.navbar-nav.navbar-right
       (if @user
         [:li [:a {:href "#"} (:name @user)]]
@@ -39,7 +39,7 @@
 
 (defn home-page []
   [:div [:h2 "Welcome to TeamTv7"]
-   [:div [:a {:href "/project"} "Design a presentation"]]])
+   [:div [:a {:href "#" :on-click #(dispatch [:design])} "Design a presentation"]]])
 
 (defn about-page []
   [:div [:h2 "About TeamTv7"]
@@ -99,8 +99,8 @@
   (dispatch [:current-page [#'preview-page nil]]))
 
 (secretary/defroute "/show/:folder/:proj-id" [folder proj-id]
-  (dispatch [:current-page #'preview-page])
-  (l/load-project (str folder "/" proj-id)))
+  (dispatch [:load-project proj-id])
+  (dispatch [:current-page #'preview-page]))
 
 
 ;; -------------------------

@@ -21,7 +21,8 @@
             [re-frame.core :refer [subscribe]]
             [worktv.subs :refer [init-subs]]
             [worktv.events :refer [init-events]]
-            [re-frame.core :refer [dispatch]])
+            [re-frame.core :refer [dispatch]]
+            [worktv.db :as db])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (init-subs)
@@ -29,14 +30,6 @@
 
 (def ^:dynamic *edit-mode* true)
 
-(def content-types [{:type :image :label "Image" :icon "fa-image"}
-                    {:type :video :label "Video" :icon "fa-file-video"}
-                    {:type :custom :label "Custom" :icon "fa-code"}
-                    {:type :chart :label "Chart" :icon "fa-chart-bar"}
-                    {:type :page :label "Web Page" :icon "fa-newspaper"}
-                    {:type :slides :label "Slides" :icon "fa-film" }])
-
-(def blank-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"})
 
 (def current-design (subscribe [:current-project]))
 ;; (def current-design
@@ -55,6 +48,7 @@
     data))
 
 (defn pane-by-id [id]
+  (js/console.log "current proj:" @current-design)
   (-> @current-design :layout (get id)))
 
 (defn update-pane [pane]
@@ -170,7 +164,8 @@
                               "ctrl+k" #(dispatch [:delete-pane]))}
    ;; @alert
    [modal-dialog]
-   (pane-view (pane-by-id 1))])
+   (when @current-design
+     (pane-view (pane-by-id 1)))])
 
 (defn handle-save-project []
   (if (:id @current-design)
@@ -202,7 +197,7 @@
                                      :content [search-project-form]}])}
             "Open"]]
       [:li [:a {:href "#" :title "New Project"
-                :on-click #(dispatch [:new-project])}
+                :on-click #(dispatch [:design true])}
             "New"]]
       [:li [:a {:href "#" :title "Save Project" :on-click handle-save-project}
             "Save"]]
@@ -230,7 +225,7 @@
                           :aria-expanded false} "Widgets" [:span.caret]]
      [:ul.dropdown-menu
       (doall
-       (for [{:keys [type label icon]} content-types]
+       (for [{:keys [type label icon]} db/content-types]
          ^{:key type}
          [:li [:a {:href "#" :draggable true
                    :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
