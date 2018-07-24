@@ -147,7 +147,8 @@
 (reg-event-db
  :update-pane
  (fn [db [_ pane]]
-   (update-in [:current-project :layout] assoc (:id pane) pane)))
+   (js/console.log "pane is" (clj->js pane))
+   (update-in db [:current-project :layout] assoc (:id pane) pane)))
 
 (reg-event-db
  :edit-pane

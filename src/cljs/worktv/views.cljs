@@ -5,7 +5,8 @@
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
             [worktv.utils :as u]
             [worktv.backend :as b]
-            [re-frame.core :refer [subscribe]])
+            [re-frame.core :refer [subscribe]]
+            [re-frame.core :refer [dispatch]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -36,7 +37,7 @@
 
 (defn modal-dialog []
   (with-let [modal (subscribe [:modal])]
-    (when-let [{:keys [title ok-event content]} @modal]
+    (when-let [{:keys [title ok-fn content ok-event]} @modal]
       [:div.modal {:style {:display "block"} :tabIndex -1}
        [:div.modal-dialog
         [:div.modal-content
@@ -46,9 +47,9 @@
             [c/alert (:error @modal)])
           content]
          [:div.modal-footer
-          (if ok-event
+          (when (or (fn? ok-fn) ok-event)
             [:button.btn.btn-primary
-             {:on-click #(dispatch ok-event)} "OK"])
+             {:on-click (or ok-fn #(dispatch ok-event))} "OK"])
           [:button.btn {:on-click #(dispatch [:close-modal])} "Close"]]]]])))
 
 (defn save-form [data]

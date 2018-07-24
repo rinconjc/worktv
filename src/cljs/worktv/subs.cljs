@@ -19,18 +19,19 @@
 
 (reg-sub :project-search (fn [db _] (:project-search db)))
 
-(reg-sub :error* (fn [db _] (get-in db [:alert :error])))
+(reg-sub :alert* (fn [db _] (:alert db)))
 
 (reg-sub
- :error
- :<- [:error*]
- (fn [error [_]]
-   (cond
-     (string? error) error
-     (map? error) :error)))
+ :alert
+ :<- [:alert*]
+ (fn [{:keys [error success fade-after] :as alert} [_]]
+   (js/console.log "alert was" (clj->js alert))
+   (cond-> {:text (or error success) :fade-after (or fade-after 5)}
+     (some? error) (assoc :type "danger")
+     (map? error) (assoc :text (:error error)))))
 
 (reg-sub :current-project (fn [db _] (:current-project db)))
 
 (reg-sub :pane-dialog (fn [db _] (:pane-dialog db)))
 
-(reg-sub :selected-pane-id (fn [db _]) (:selected-pane db))
+(reg-sub :selected-pane-id (fn [db _] (:selected-pane db)))

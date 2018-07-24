@@ -48,7 +48,6 @@
     data))
 
 (defn pane-by-id [id]
-  (js/console.log "current proj:" @current-design)
   (-> @current-design :layout (get id)))
 
 (defn update-pane [pane]
@@ -80,7 +79,7 @@
 (defn editor-dialog [pane]
   (with-let [model (atom pane)]
     {:title (str "Edit " (-> @model :content-type name) " details")
-     :ok-event [:update-pane @model]
+     :ok-fn #(dispatch [:update-pane @model])
      :content (content-editor model)}))
 
 (defn show-editor [pane]
@@ -162,7 +161,7 @@
     :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
                               "ctrl+v" #(dispatch [:split-pane :vertical])
                               "ctrl+k" #(dispatch [:delete-pane]))}
-   ;; @alert
+   [c/alert @(subscribe [:alert])]
    [modal-dialog]
    (when @current-design
      (pane-view (pane-by-id 1)))])
@@ -173,7 +172,7 @@
     (let [data (atom {})]
       (dispatch [:modal {:title "Save Design"
                          :content [save-form data]
-                         :ok-event [:save-project @data]}]))))
+                         :ok-fn #(dispatch [:save-project @data])}]))))
 
 (defn do-publish-project []
   (go
