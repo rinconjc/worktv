@@ -39,7 +39,7 @@
 ;;     model))
 
 ;; (def selected-pane-id (atom nil))
-(def alert (atom nil))
+;; (def alert (atom nil))
 
 
 (defn data-from [url refresh-rate]
@@ -109,7 +109,7 @@
 (defmethod pane-view :container-pane [{:keys [pane1 pane2] :as opts}]
   [splitter opts
    (pane-view (pane-by-id pane1))
-   (pane-view (pane-by-id pane2)) update-pane])
+   (pane-view (pane-by-id pane2)) #(dispatch [:update-pane opts])])
 
 (defmethod content-view :image [{:keys [url display title]}]
   [:div.full.fill
@@ -161,7 +161,7 @@
     :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
                               "ctrl+v" #(dispatch [:split-pane :vertical])
                               "ctrl+k" #(dispatch [:delete-pane]))}
-   [c/alert @(subscribe [:alert])]
+   (c/alert @(subscribe [:alert]))
    [modal-dialog]
    (when @current-design
      (pane-view (pane-by-id 1)))])
@@ -174,12 +174,15 @@
                          :content [save-form data]
                          :ok-fn #(dispatch [:save-project @data])}]))))
 
-(defn do-publish-project []
-  (go
-    (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
-      (if result
-        (secretary/dispatch! (str "/show/" (:folder @current-design) "/" (:id @current-design)))
-        (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
+(defn handle-publish-project []
+  ;; show prompt for publishing path
+)
+;; (defn do-publish-project []
+;;   (go
+;;     (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
+;;       (if result
+;;         (secretary/dispatch! (str "/show/" (:folder @current-design) "/" (:id @current-design)))
+;;         (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
 
 (defn design-menu []
   [:nav.navbar-collapse-collapse
@@ -203,7 +206,7 @@
       [:li [:a {:href "/preview" :title "Preview Project"}
             "Preview"]]
       [:li [:a {:href "#" :title "Publish Project"
-                :on-click #(do (do-publish-project) (.preventDefault %))}
+                :on-click handle-publish-project}
             "Publish"]]
       [:li [:a {:href "#" :title "Show Project"
                 :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))

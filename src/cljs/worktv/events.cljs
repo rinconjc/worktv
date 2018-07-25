@@ -144,11 +144,12 @@
      (or new? (nil? (:current-project db)))
      (update :db assoc :current-project db/blank-design))))
 
-(reg-event-db
+(reg-event-fx
  :update-pane
- (fn [db [_ pane]]
-   (js/console.log "pane is" (clj->js pane))
-   (update-in db [:current-project :layout] assoc (:id pane) pane)))
+ (fn [{:keys [db]} [_ pane]]
+   (js/console.log "pane:" (clj->js pane))
+   {:db (update-in db [:current-project :layout] assoc (:id pane) pane)
+    :dispatch [:close-modal]}))
 
 (reg-event-db
  :edit-pane
