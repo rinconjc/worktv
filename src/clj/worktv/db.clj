@@ -7,7 +7,12 @@
             [ragtime.repl :as rr])
   (:import java.nio.ByteBuffer
            java.security.SecureRandom
+           java.sql.Clob
            java.util.Base64))
+
+(defn- clob->str [^Clob clob]
+  (some-> clob
+          (.getSubString 1 (.length clob))))
 
 (defn to-bytes [n]
   (let [ buf (ByteBuffer/allocate 4)]
@@ -30,7 +35,7 @@
    (let [ds {:datasource
              (cp/make-datasource
               {:adapter "h2"
-               :url (str "jdbc:h2:" (or (System/getProperty "DB_FILE") "~/teamtv-db"))})}]
+               :url (str "jdbc:h2:" (or (System/getProperty "DB_FILE") "~/teamtv8-db"))})}]
      (rr/migrate {:datastore (r/sql-database ds)
                   :migrations (r/load-resources "migrations")} )
      ds)))
@@ -61,20 +66,20 @@
 
 (defn create-project [proj]
   (first (jdbc/insert! @db-spec "projects"
-                       (-> proj (select-keys [:owner :content :name])
-                           (update :content pr-str)))))
+                       (-> proj (select-keys [:owner :layout :name])
+                           (update :layout pr-str)))))
 
 (defn find-projects [{:keys [name]}]
-  (jdbc/query @db-spec ["select id, name from projects where name like ? order by create_at desc"
+  (jdbc/query @db-spec ["select id, name from projects where name like ? order by created_at desc"
                         name]))
 
 (defn get-project [proj-id]
   (some->
    (first (jdbc/query @db-spec ["select * from projects where id=?" proj-id]))
-   (update :content edn/read-string)))
+   (update :layout (comp edn/read-string  clob->str))))
 
 (defn update-project [proj-id proj]
   (first (jdbc/update! @db-spec "projects"
-                 (-> proj (select-keys [:name :content])
-                     (update :content pr-str))
+                 (-> proj (select-keys [:name :layout])
+                     (update :layout pr-str))
                  ["owner=? and id=?" (:owner proj) proj-id])))

@@ -112,10 +112,11 @@
  (fn [{:keys[db]} [_ info]]
    (let [proj (merge (:current-project db) info)]
      {:xhr {:req (if (:id proj)
-                   [PUT (str "/api/projects" (:id proj)) {:params proj}]
+                   [PUT (str "/api/projects/" (:id proj)) {:params proj}]
                    [POST "/api/projects" {:params proj}])
             :on-success [:project-saved]
-            :on-error [:assoc-in-db [:alert] {:error "Failed to save"}]}})))
+            :on-error [:assoc-in-db [:alert] {:error "Failed to save"}]}
+      :db (assoc db :current-project proj)})))
 
 (reg-event-db
  :project-saved
@@ -147,7 +148,6 @@
 (reg-event-fx
  :update-pane
  (fn [{:keys [db]} [_ pane]]
-   (js/console.log "pane:" (clj->js pane))
    {:db (update-in db [:current-project :layout] assoc (:id pane) pane)
     :dispatch [:close-modal]}))
 

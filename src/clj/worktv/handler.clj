@@ -115,8 +115,11 @@
 
            (PUT "/projects/:project-id" [project-id]
                 (fn [req]
-                  {:body (db/update-project
-                          project-id (assoc (:body req) :owner (:user-id req)))}))
+                  (log/info "handling project update")
+                  (when (= 1
+                           (db/update-project
+                            project-id (assoc (:body req) :owner (:user-id req))))
+                    (status {} 204))))
 
            (GET "/search" []
                 (fn [req] (let [{:keys [q type]} (-> req :params)

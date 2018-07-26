@@ -11,7 +11,7 @@ create table projects (id int not null identity primary key
 , owner int not null
 , name varchar(100) not null
 , created_at timestamp default current_timestamp
-, content clob
+, layout clob
 , foreign key (owner) references app_users (id))"
 
       "

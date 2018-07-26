@@ -50,12 +50,11 @@
    [:div "A secure access link has been sent to your mailbox, please check your email."]])
 
 (defn login-page []
-  (with-let [login (atom nil)
-             error (subscribe [:error])]
+  (with-let [login (atom nil)]
     [:div.row
      [:div.col-sm-5.col-sm-offset-4
       [:h2 "Login"]
-      [:div.row [c/alert @error]]
+      [:div.row (c/alert @(subscribe [:alert]))]
       [:form.form
        {:on-submit (event-no-default #(dispatch [:login-with-email (:username @login)]))}
        [c/input {:type "email" :label "Email:" :model [login :username]}]

@@ -26,8 +26,8 @@
            [{:ok _}] (secreatary/dispatch! "/login-confirm")
            [{:error error}] (session/put! :error error))))
 
-(defn get-user []
-  (async-http GET "/api/user"))
+;; (defn get-user []
+;;   (async-http GET "/api/user"))
 
 ;; (defn login [user password]
 ;;   (let [auth (.auth js/firebase)
@@ -45,8 +45,8 @@
 (defn find-projects [name]
   (async-http GET "/api/projects" {:params {:name name}}))
 
-(defn get-project [id]
-  (async-http GET (str "/api/projects/" id)))
+;; (defn get-project [id]
+;;   (async-http GET (str "/api/projects/" id)))
 
 (defn publish-project [proj-id, path]
   (async-http POST (str "/api/publishings") {:params {:project-id proj-id :path path}}))

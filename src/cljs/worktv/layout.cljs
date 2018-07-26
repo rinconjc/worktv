@@ -22,7 +22,8 @@
             [worktv.subs :refer [init-subs]]
             [worktv.events :refer [init-events]]
             [re-frame.core :refer [dispatch]]
-            [worktv.db :as db])
+            [worktv.db :as db]
+            [worktv.utils :refer [event-no-default]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (init-subs)
@@ -83,6 +84,7 @@
      :content (content-editor model)}))
 
 (defn show-editor [pane]
+  (js/console.log "showing editor for" (clj->js pane))
   (when (:content-type pane)
     (dispatch [:modal (editor-dialog pane)])))
 
@@ -97,7 +99,7 @@
   [:div.fill.full
    (if *edit-mode*
      {:on-click #(dispatch [:select-pane (:id pane)])
-      :on-double-click #(do (.preventDefault %) (show-editor pane))
+      :on-double-click (event-no-default #(show-editor pane))
       :on-drag-over #(.preventDefault %)
       :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
       :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
@@ -109,7 +111,7 @@
 (defmethod pane-view :container-pane [{:keys [pane1 pane2] :as opts}]
   [splitter opts
    (pane-view (pane-by-id pane1))
-   (pane-view (pane-by-id pane2)) #(dispatch [:update-pane opts])])
+   (pane-view (pane-by-id pane2)) #(dispatch [:update-pane %])])
 
 (defmethod content-view :image [{:keys [url display title]}]
   [:div.full.fill
@@ -174,6 +176,12 @@
                          :content [save-form data]
                          :ok-fn #(dispatch [:save-project @data])}]))))
 
+(defn handle-open-project []
+  (dispatch [:find-projects "%"])
+  (dispatch [:modal {:title "Open Project"
+                     :ok-event [:open-project]
+                     :content [search-project-form]}]))
+
 (defn handle-publish-project []
   ;; show prompt for publishing path
 )
@@ -193,10 +201,7 @@
                           :aria-expanded false} "Project" [:span.caret]]
      [:ul.dropdown-menu
       [:li [:a {:href "#" :title "Open Project"
-                :on-click #(dispatch
-                            [:modal {:title "Open Project"
-                                     :ok-event [:open-project]
-                                     :content [search-project-form]}])}
+                :on-click handle-open-project}
             "Open"]]
       [:li [:a {:href "#" :title "New Project"
                 :on-click #(dispatch [:design true])}
