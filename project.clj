@@ -36,7 +36,8 @@
                  [buddy/buddy-sign "2.0.0"]
                  [org.slf4j/slf4j-simple "1.7.25"]
                  [re-frame "0.10.5"]
-                 [prismatic/plumbing "0.5.5"]]
+                 [prismatic/plumbing "0.5.5"]
+                 [ring-middleware-format "0.7.2"]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]

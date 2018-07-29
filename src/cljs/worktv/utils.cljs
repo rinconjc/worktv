@@ -187,8 +187,8 @@
                    :handler #(go
                                (js/console.log "success " uri)
                                (>! ch {:ok %}))
-                   :format :json
-                   :response-format :json
+                   ;; :format :json
+                   ;; :response-format :json
                    :error-handler #(go
                                      (js/console.log "error" uri %)
                                      (>! ch {:error (:response %)}))

@@ -11,7 +11,6 @@
             [postal.core :as postal]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [ring.middleware.cookies :refer [wrap-cookies]]
-            [ring.middleware.json :refer [wrap-json-body wrap-json-response]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.util.response :refer [redirect set-cookie status]]
@@ -171,8 +170,9 @@
   (resources "/")
 
   (-> api-routes
-      (wrap-json-body {:keywords? true})
-      wrap-json-response
+      wrap-restful-format
+      ;; (wrap-json-body {:keywords? true})
+      ;; wrap-json-response
       wrap-keyword-params
       wrap-params
       wrap-auth
