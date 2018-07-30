@@ -157,13 +157,18 @@
      [:div.carousel-inner
       [:div (pane-view slide)]])])
 
+(defn alert [attrs]
+  (when-not (empty? (:text attrs))
+    [c/alert-box (assoc attrs :on-close #(dispatch [:hide-alert]))
+     (:text attrs)]))
+
 (defn layout-editor []
   [:div.fill.full
    {:tabIndex 1
     :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
                               "ctrl+v" #(dispatch [:split-pane :vertical])
                               "ctrl+k" #(dispatch [:delete-pane]))}
-   (c/alert @(subscribe [:alert]))
+   [alert @(subscribe [:alert])]
    [modal-dialog]
    (when @current-design
      (pane-view (pane-by-id 1)))])

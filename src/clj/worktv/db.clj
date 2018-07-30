@@ -35,7 +35,7 @@
    (let [ds {:datasource
              (cp/make-datasource
               {:adapter "h2"
-               :url (str "jdbc:h2:" (or (System/getProperty "DB_FILE") "~/teamtv8-db"))})}]
+               :url (str "jdbc:h2:" (or (System/getProperty "DB_FILE") "~/teamtv-db"))})}]
      (rr/migrate {:datastore (r/sql-database ds)
                   :migrations (r/load-resources "migrations")} )
      ds)))

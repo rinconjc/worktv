@@ -77,6 +77,11 @@
           :on-success [:assoc-in-db [:user]]}}))
 
 (reg-event-db
+ :hide-alert
+ (fn [db _]
+   (dissoc db :alert)))
+
+(reg-event-db
  :open-project-search
  (fn [db _]
    (assoc db :project-search {:projects [] :status nil})))

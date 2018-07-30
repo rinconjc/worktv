@@ -25,8 +25,7 @@
  :alert
  :<- [:alert*]
  (fn [{:keys [error success fade-after] :as alert} [_]]
-   (js/console.log "alert was" (clj->js alert))
-   (cond-> {:text (or error success) :fade-after (or fade-after 5)}
+   (cond-> {:text (or error success) :type "success" :fade-after (or fade-after 5)}
      (some? error) (assoc :type "danger")
      (map? error) (assoc :text (:error error)))))
 

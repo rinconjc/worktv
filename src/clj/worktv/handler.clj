@@ -32,7 +32,7 @@
             (swap! active-users conj id)
             id)))
     (catch Exception e
-      (log/warn "invalid token " token))))
+      (log/warn "invalid token " e token))))
 
 (defn wrap-auth [handler]
   (fn [req]
