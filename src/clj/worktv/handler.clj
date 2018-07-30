@@ -11,6 +11,7 @@
             [postal.core :as postal]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
             [ring.middleware.cookies :refer [wrap-cookies]]
+            [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.util.response :refer [redirect set-cookie status]]
@@ -102,7 +103,7 @@
   (context "/api" []
            (POST "/projects" []
                  (fn [req]
-                   {:body (db/create-project (assoc (:body req) :owner (:user-id req)))}))
+                   {:body (db/create-project (assoc (:body-params req) :owner (:user-id req)))}))
 
            (GET "/projects" []
                 (fn [req]
@@ -117,7 +118,7 @@
                   (log/info "handling project update")
                   (when (= 1
                            (db/update-project
-                            project-id (assoc (:body req) :owner (:user-id req))))
+                            project-id (assoc (:body-params req) :owner (:user-id req))))
                     (status {} 204))))
 
            (GET "/search" []
@@ -127,7 +128,7 @@
 
            (POST "/login" []
                  (fn[req]
-                   (let [{:keys [email expiry] :as body} (:body req)
+                   (let [{:keys [email expiry] :as body} (:body-params req)
                          base-url (str (-> req :scheme name) "://"
                                        (-> req :headers (get "host")))
                          token (db/login-request body)

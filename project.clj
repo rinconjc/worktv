@@ -42,7 +42,9 @@
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
             [lein-asset-minifier "0.2.7"
-             :exclusions [org.clojure/clojure]]]
+             :exclusions [org.clojure/clojure]]
+            [refactor-nrepl "2.3.1"]
+            [cider/cider-nrepl "0.14.0"]]
 
   :ring {:handler worktv.handler/app
          :uberwar-name "worktv.war"}
