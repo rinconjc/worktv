@@ -59,6 +59,7 @@
            :content "width=device-width, initial-scale=1"}]
    (include-css (if (env :dev) "/css/site.css" "/css/site.min.css"))
    (include-css (if (env :dev) "/css/splitter.css" "/css/splitter.min.css"))
+   (include-css "https://cdn.quilljs.com/1.3.6/quill.snow.css")
    ;; (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css")
    (include-css "/css/bootstrap.min.css")
    (include-css "https://use.fontawesome.com/releases/v5.0.13/css/all.css")
@@ -69,6 +70,7 @@
    ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-auth.js")
    ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
    (include-js "https://www.gstatic.com/charts/loader.js")
+   (include-js "https://cdn.quilljs.com/1.3.6/quill.min.js")
    ])
 
 
