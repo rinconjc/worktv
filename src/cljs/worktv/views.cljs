@@ -181,3 +181,13 @@
   [:form.form
    [:div.col-md-4
     [c/input {:type "number" :label "interval" :model [form :interval]}]]])
+
+(defn rich-editor [attrs]
+  (r/create-class
+   {:reagent-render (fn [attrs] [:div])
+    :component-did-mount
+    (fn [c]
+      (let [editor (js/Quill. c, #js {:debug "info" :theme "snow"})]))}))
+
+(defn html-form [form]
+  [rich-editor @form])

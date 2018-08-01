@@ -23,7 +23,8 @@
             [worktv.events :refer [init-events]]
             [re-frame.core :refer [dispatch]]
             [worktv.db :as db]
-            [worktv.utils :refer [event-no-default]])
+            [worktv.utils :refer [event-no-default]]
+            [worktv.views :refer [html-form]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (init-subs)
@@ -76,6 +77,9 @@
 
 (defmethod content-editor :slides [pane]
   [slides-form pane])
+
+(defmethod content-editor :html [pane]
+  [html-form pane])
 
 (defn editor-dialog [pane]
   (with-let [model (atom pane)]
@@ -156,6 +160,9 @@
    (for [slide (:slides pane)] ^{:key (:id slide)}
      [:div.carousel-inner
       [:div (pane-view slide)]])])
+
+(defmethod content-view :html [pane]
+  [:div])
 
 (defn alert [attrs]
   (when-not (empty? (:text attrs))
