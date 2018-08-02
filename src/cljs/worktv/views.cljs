@@ -68,8 +68,8 @@
       (doall
        (for [{:keys [id name description]} (:projects @proj-search)]
          ^{:key id}[:a.list-group-item {:href "#" :on-click #(dispatch [:project-search-select id])}
-                   [:h4.list-group-item-heading name]
-                   [:p.list-group-item-text description]]))]]))
+                    [:h4.list-group-item-heading name]
+                    [:p.list-group-item-text description]]))]]))
 
 (defn y-serie-form [add-fn]
   (with-let [form (atom {})]
@@ -187,7 +187,16 @@
    {:reagent-render (fn [attrs] [:div])
     :component-did-mount
     (fn [c]
-      (let [editor (js/Quill. c, #js {:debug "info" :theme "snow"})]))}))
+      (let [editor (js/Quill. (r/dom-node c) #js
+                              {:debug "warn" :theme "snow"
+                               :modules #js {:toolbar (clj->js
+                                                       [[{:font []}]
+                                                        [{:header [false 1 2 3 4 5]}]
+                                                        ["bold" "italic" "underline"]
+                                                        ["link" "image"]
+                                                        [{:color []} {:background []}]
+                                                        [{:align []}]])}})]
+        (some->> (:on-change attrs) (.on editor "text-change"))))}))
 
 (defn html-form [form]
-  [rich-editor @form])
+  [rich-editor (assoc @form :on-change #(swap! form assoc :content % ))])
