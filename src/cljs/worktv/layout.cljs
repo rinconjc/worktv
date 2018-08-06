@@ -101,14 +101,17 @@
 
 (defmethod pane-view :content-pane [pane]
   [:div.fill.full
-   (if *edit-mode*
+   (when *edit-mode*
      {:on-click #(dispatch [:select-pane (:id pane)])
       :on-double-click (event-no-default #(show-editor pane))
       :on-drag-over #(.preventDefault %)
       :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
       :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
       :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
-      :on-drop #(show-editor (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))
+      :on-drop #(do (show-editor
+                     (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))
+                    (-> % .-target .-classList (.remove "drag-over"))
+                    false)
       :class (when (= (:id pane) @(subscribe [:selected-pane-id]))  "selected-pane")})
    (content-view pane)])
 
@@ -162,7 +165,7 @@
       [:div (pane-view slide)]])])
 
 (defmethod content-view :html [pane]
-  [:div])
+  [:div {:dangerouslySetInnerHTML {:__html (:content pane)}}])
 
 (defn alert [attrs]
   (when-not (empty? (:text attrs))

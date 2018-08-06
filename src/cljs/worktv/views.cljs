@@ -196,7 +196,9 @@
                                                         ["link" "image"]
                                                         [{:color []} {:background []}]
                                                         [{:align []}]])}})]
-        (some->> (:on-change attrs) (.on editor "text-change"))))}))
+        (.pasteHTML editor (:content attrs))
+        (when-let [f (:on-change attrs)]
+          (.on editor "text-change" #(f (-> editor .-root .-innerHTML))))))}))
 
 (defn html-form [form]
   [rich-editor (assoc @form :on-change #(swap! form assoc :content % ))])
