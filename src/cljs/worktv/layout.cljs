@@ -162,7 +162,9 @@
     [:li {:on-click #(js/console.log "add slide")} [:i.fa.fa-plus-circle]]]
    (for [slide (:slides pane)] ^{:key (:id slide)}
      [:div.carousel-inner
-      [:div (pane-view slide)]])])
+      [:div (pane-view slide)]])
+   [:a.left.carousel-control {:href "#"} [:span.glyphicon.glyphicon-chevron-left]]
+   [:a.right.carousel-control {:href "#"} [:span.glyphicon [:i.fa.fa-plus-circle]]]])
 
 (defmethod content-view :html [pane]
   [:div {:dangerouslySetInnerHTML {:__html (:content pane)}}])

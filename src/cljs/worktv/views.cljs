@@ -179,7 +179,7 @@
 
 (defn slides-form [form]
   [:form.form
-   [:div.col-md-4
+   [:div.col-md-2
     [c/input {:type "number" :label "interval" :model [form :interval]}]]])
 
 (defn rich-editor [attrs]
