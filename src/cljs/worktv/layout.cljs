@@ -158,13 +158,12 @@
   [:div.carousel-slide
    [:ol.carousel-indicators
     (for [i (range (:slide-count pane))]
-      ^{:key i}[:li {:data-slide-to i}])
-    [:li {:on-click #(js/console.log "add slide")} [:i.fa.fa-plus-circle]]]
+      ^{:key i}[:li {:data-slide-to i}])]
    (for [slide (:slides pane)] ^{:key (:id slide)}
      [:div.carousel-inner
       [:div (pane-view slide)]])
    [:a.left.carousel-control {:href "#"} [:span.glyphicon.glyphicon-chevron-left]]
-   [:a.right.carousel-control {:href "#"} [:span.glyphicon [:i.fa.fa-plus-circle]]]])
+   [:a.right.carousel-control {:href "#"} [:span.glyphicon.glyphicon-chevron-right]]])
 
 (defmethod content-view :html [pane]
   [:div {:dangerouslySetInnerHTML {:__html (:content pane)}}])
@@ -201,7 +200,7 @@
 
 (defn handle-publish-project []
   ;; show prompt for publishing path
-)
+  )
 ;; (defn do-publish-project []
 ;;   (go
 ;;     (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]

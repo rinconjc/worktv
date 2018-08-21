@@ -180,7 +180,12 @@
 (defn slides-form [form]
   [:form.form
    [:div.col-md-2
-    [c/input {:type "number" :label "interval" :model [form :interval]}]]])
+    [c/input {:type "number" :label "interval" :model [form :interval]}]
+    [:ul.nav.nav-tabs
+     (for [slide (:slides @form)]
+       ^{:key (:id slide)}[:li [:a {:href "#"} (str "Slide" (:id slide))]])
+     [:li [:a {:href "#"} "Add Slide"]]
+     [:div.active-tab]]]])
 
 (defn rich-editor [attrs]
   (r/create-class

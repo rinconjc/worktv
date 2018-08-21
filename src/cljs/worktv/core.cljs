@@ -27,22 +27,22 @@
         [:li [:a {:href "/login"} "Login"]])]]))
 
 (defn menu-bar [page-menu]
-  [:nav.navbar.navbar-default
+  [:nav.navbar.navbar-inverse
    [:div.container-fluid
     [:div.navbar-header
      [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "TeamTv7"]]
+     [:a.navbar-brand "TeamTVi"]]
     [page-menu]]])
 
 (defn home-page []
-  [:div [:h2 "Welcome to TeamTv7"]
+  [:div [:h2 "Welcome to TeamTVi"]
    [:div [:a {:href "#" :on-click #(dispatch [:design])} "Design a presentation"]]])
 
 (defn about-page []
-  [:div [:h2 "About TeamTv7"]
+  [:div [:h2 "About TeamTVi"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
