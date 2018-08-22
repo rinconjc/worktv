@@ -88,7 +88,6 @@
      :content (content-editor model)}))
 
 (defn show-editor [pane]
-  (js/console.log "showing editor for" (clj->js pane))
   (when (:content-type pane)
     (dispatch [:modal (editor-dialog pane)])))
 
@@ -108,10 +107,10 @@
       :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
       :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
       :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
-      :on-drop #(do (show-editor
-                     (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))
-                    (-> % .-target .-classList (.remove "drag-over"))
-                    false)
+      :on-drop (event-no-default
+                #(do (show-editor (assoc pane :content-type
+                                         (-> % .-dataTransfer (.getData "text/plain") keyword)))
+                    (-> % .-target .-classList (.remove "drag-over"))))
       :class (when (= (:id pane) @(subscribe [:selected-pane-id]))  "selected-pane")})
    (content-view pane)])
 
@@ -162,8 +161,22 @@
    (for [slide (:slides pane)] ^{:key (:id slide)}
      [:div.carousel-inner
       [:div (pane-view slide)]])
-   [:a.left.carousel-control {:href "#"} [:span.glyphicon.glyphicon-chevron-left]]
-   [:a.right.carousel-control {:href "#"} [:span.glyphicon.glyphicon-chevron-right]]])
+   [:div {:style {:position "absolute" :bottom "10px" :width "100%" :text-align "center"}}
+    (when *edit-mode*
+      [:div.btn-group
+       [:button.btn.btn-default [:span.glyphicon.glyphicon-chevron-left]]
+       [:button.btn.btn-default [:span.glyphicon.glyphicon-chevron-right]]
+       [:button.btn.btn-default [:span.glyphicon.glyphicon-edit]]
+       [:div.btn-group
+        [:button.btn.btn-default.dropdown-toggle
+         [:span.glyphicon.glyphicon-plus] [:span.caret]]
+        [:ul.dropdown-menu
+         (for [{:keys [type label icon]} db/slide-content-types]
+           ^{:key type}
+           [:li [:a {:href "#" :title label
+                     :on-click #(show-editor (assoc pane :content-type type))}
+                 [:i.fa.fa-fw {:class icon}] label]])]]
+       [:button.btn.btn-default [:span.glyphicon.glyphicon-minus]]])]])
 
 (defmethod content-view :html [pane]
   [:div {:dangerouslySetInnerHTML {:__html (:content pane)}}])

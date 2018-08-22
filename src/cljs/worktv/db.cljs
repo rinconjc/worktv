@@ -8,4 +8,6 @@
                     {:type :html :label "Custom Content" :icon "fa-newspaper"}
                     {:type :slides :label "Slides" :icon "fa-film" }])
 
+(def slide-content-types (filter #(#{:image :video :html :chart :custom} (:type %)) content-types))
+
 (def blank-design {:layout {1 {:id 1 :type :content-pane}} :screen "1280x720"})
