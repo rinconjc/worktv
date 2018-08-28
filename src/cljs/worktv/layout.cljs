@@ -108,9 +108,10 @@
       :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
       :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
       :on-drop (event-no-default
-                #(do (show-editor (assoc pane :content-type
-                                         (-> % .-dataTransfer (.getData "text/plain") keyword)))
-                    (-> % .-target .-classList (.remove "drag-over"))))
+                #(do (show-editor
+                      (merge pane (db/default-content
+                                    (-> % .-dataTransfer (.getData "text/plain") keyword))))
+                     (-> % .-target .-classList (.remove "drag-over"))))
       :class (when (= (:id pane) @(subscribe [:selected-pane-id]))  "selected-pane")})
    (content-view pane)])
 
@@ -156,11 +157,14 @@
 (defmethod content-view :slides [pane]
   [:div.carousel-slide
    [:ol.carousel-indicators
-    (for [i (range (:slide-count pane))]
+    (for [i (range (count (:slides pane)))]
       ^{:key i}[:li {:data-slide-to i}])]
-   (for [slide (:slides pane)] ^{:key (:id slide)}
-     [:div.carousel-inner
-      [:div (pane-view slide)]])
+   (doall
+    (map-indexed
+     (fn[i slide] ^{:key i}
+       [:div.carousel-inner
+        [:div (pane-view slide)]]) (:slides pane)))
+
    [:div {:style {:position "absolute" :bottom "10px" :width "100%" :text-align "center"}}
     (when *edit-mode*
       [:div.btn-group
@@ -169,12 +173,16 @@
        [:button.btn.btn-default [:span.glyphicon.glyphicon-edit]]
        [:div.btn-group
         [:button.btn.btn-default.dropdown-toggle
+         {:data-toggle "dropdown" :aria-haspopup "true" :aria-expanded "false"}
          [:span.glyphicon.glyphicon-plus] [:span.caret]]
         [:ul.dropdown-menu
-         (for [{:keys [type label icon]} db/slide-content-types]
+         (for [[type {:keys [label icon]}] db/slide-content-types]
            ^{:key type}
            [:li [:a {:href "#" :title label
-                     :on-click #(show-editor (assoc pane :content-type type))}
+                     :on-click #(show-editor
+                                 (assoc (db/default-content type)
+                                        :type :content-pane
+                                        :path [(:id pane) :slides (or (count (:slides pane)) 0)]))}
                  [:i.fa.fa-fw {:class icon}] label]])]]
        [:button.btn.btn-default [:span.glyphicon.glyphicon-minus]]])]])
 
@@ -261,7 +269,7 @@
                           :aria-expanded false} "Widgets" [:span.caret]]
      [:ul.dropdown-menu
       (doall
-       (for [{:keys [type label icon]} db/content-types]
+       (for [[type {:keys [label icon]}] db/content-types]
          ^{:key type}
          [:li [:a {:href "#" :draggable true
                    :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))

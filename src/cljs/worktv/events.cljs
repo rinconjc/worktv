@@ -153,8 +153,9 @@
 (reg-event-fx
  :update-pane
  (fn [{:keys [db]} [_ pane]]
-   {:db (update-in db [:current-project :layout] assoc (:id pane) pane)
-    :dispatch [:close-modal]}))
+   (let [path (or (:path pane) [(:id pane)])]
+     {:db (update-in db [:current-project :layout] assoc-in path (dissoc pane :path))
+      :dispatch [:close-modal]})))
 
 (reg-event-db
  :edit-pane
