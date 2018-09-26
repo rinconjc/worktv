@@ -138,7 +138,7 @@
                 :placeholder "Optional title" :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
       [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL or search text"
                 :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
-      [c/input {:type "radio" :label "Display" :model [form :display] :id "display"
+      [c/input {:type "radio" :label "Display" :model [form :display] :name "display"
                 :wrapper-class "col-sm-10" :label-class "col-sm-2"
                 :items {"fit-full" "Fill" "clipped" "Clip"}}]]
      [:div {:on-double-click #(if-let [url (-> % .-target (.getAttribute "data-url"))]
