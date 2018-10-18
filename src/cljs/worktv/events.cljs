@@ -211,3 +211,19 @@
                              (dissoc pane-id (inc pane-id) (dec pane-id))))
            (dissoc :selected-pane)))
      (assoc db :alert {:error "Please select the pane to split first" :fade-after 5}))))
+
+(defn remove-nth [v n]
+  (vec (concat (subvec v 0 n) (subvec v (inc n)))))
+
+(reg-event-db
+ :delete-slide
+ (fn [db [_ pane index]]
+   (update-in db [:current-project :layout (:id pane)]
+              #(as-> (update pane :slides remove-nth index) pane
+                 (if (>= index (count (:slides pane)))
+                   (assoc pane :active (dec index)) pane)))))
+
+(reg-event-db
+ :slide-active
+ (fn [db [_ pane index]]
+   (-> db (assoc-in [:current-project :layout (:id pane) :active] index))))

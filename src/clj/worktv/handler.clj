@@ -135,6 +135,7 @@
                                        (-> req :headers (get "host")))
                          token (db/login-request body)
                          link (str base-url "/api/verify?token=" token)]
+                     (log/info "login link:" link)
                      (postal/send-message
                       (env :smtp)
                       {:from (env :mail-from)

@@ -154,46 +154,46 @@
 (defmethod content-view :default [pane]
   [:div.fill "blank content"])
 
-(defmethod content-view :slides [pane]
-  (with-let [active (atom 0)]
-    [:div.carousel-slide
-    [:ol.carousel-indicators
-     (for [i (range (count (:slides pane)))]
-       ^{:key i}[:li {:data-slide-to i}])]
-    [:div.carousel-inner
-     (doall
-      (map-indexed
-       (fn[i slide] ^{:key i}
-         [:div.item (when (= @active i) {:class "active"})
-          [:div (pane-view slide)]]) (:slides pane)))]
+(defmethod content-view :slides [{:keys [active slides] :or {active 0} :as pane}]
+  [:div.carousel-slide
+   [:ol.carousel-indicators
+    (for [i (range (count (:slides pane)))]
+      ^{:key i}[:li {:data-slide-to i}])]
+   [:div.carousel-inner
+    (doall
+     (map-indexed
+      (fn[i slide] ^{:key i}
+        [:div.item (when (= active i) {:class "active"})
+         [:div (pane-view slide)]]) (:slides pane)))]
 
-    [:div {:style {:position "absolute" :bottom "10px" :width "100%" :text-align "center"}}
-     (when *edit-mode*
+   [:div {:style {:position "absolute" :bottom "10px" :width "100%" :text-align "center"}}
+    (when *edit-mode*
+      [:div.btn-group
+       (when (pos? active)
+         [:button.btn.btn-default {:on-click #(dispatch [:slide-active pane (dec active)])}
+          [:span.glyphicon.glyphicon-chevron-left]])
+       (when (< active (dec (count (:slides pane))))
+         [:button.btn.btn-default {:on-click #(dispatch [:slide-active pane (inc active)])}
+          [:span.glyphicon.glyphicon-chevron-right]])
+       [:button.btn.btn-default
+        {:on-click #(show-editor (assoc (get-in pane [:slides active])
+                                        :path [(:id pane) :slides active]))}
+        [:span.glyphicon.glyphicon-edit]]
        [:div.btn-group
-        (when (pos? @active)
-          [:button.btn.btn-default {:on-click #(swap! active dec)}
-           [:span.glyphicon.glyphicon-chevron-left]])
-        (when (< @active (dec (count (:slides pane))))
-          [:button.btn.btn-default {:on-click #(swap! active inc)}
-           [:span.glyphicon.glyphicon-chevron-right]])
-        [:button.btn.btn-default
-         {:on-click #(show-editor (assoc (get-in pane [:slides @active])
-                                         :path [(:id pane) :slides @active]))}
-         [:span.glyphicon.glyphicon-edit]]
-        [:div.btn-group
-         [:button.btn.btn-default.dropdown-toggle
-          {:data-toggle "dropdown" :aria-haspopup "true" :aria-expanded "false"}
-          [:span.glyphicon.glyphicon-plus] [:span.caret]]
-         [:ul.dropdown-menu
-          (for [[type {:keys [label icon]}] db/slide-content-types]
-            ^{:key type}
-            [:li [:a {:href "#" :title label
-                      :on-click #(show-editor
-                                  (assoc (db/default-content type)
-                                         :type :content-pane
-                                         :path [(:id pane) :slides (or (count (:slides pane)) 0)]))}
-                  [:i.fa.fa-fw {:class icon}] label]])]]
-        [:button.btn.btn-default [:span.glyphicon.glyphicon-minus]]])]]))
+        [:button.btn.btn-default.dropdown-toggle
+         {:data-toggle "dropdown" :aria-haspopup "true" :aria-expanded "false"}
+         [:span.glyphicon.glyphicon-plus] [:span.caret]]
+        [:ul.dropdown-menu
+         (for [[type {:keys [label icon]}] db/slide-content-types]
+           ^{:key type}
+           [:li [:a {:href "#" :title label
+                     :on-click #(show-editor
+                                 (assoc (db/default-content type)
+                                        :type :content-pane
+                                        :path [(:id pane) :slides (or (count (:slides pane)) 0)]))}
+                 [:i.fa.fa-fw {:class icon}] label]])]]
+       [:button.btn.btn-default {:on-click #(dispatch [:delete-slide pane active])}
+        [:span.glyphicon.glyphicon-minus]]])]])
 
 (defmethod content-view :html [pane]
   [:div {:dangerouslySetInnerHTML {:__html (:content pane)}}])
