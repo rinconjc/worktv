@@ -49,6 +49,8 @@ a:hover {
   z-index:100;
 }
 .full{
+  min-height: 100%;
+  height:100%;
   padding:0px !important;
   margin:0px !important;
 }

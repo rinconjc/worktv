@@ -130,11 +130,13 @@
 (defn handle-keys [key action & more]
   (let [keys (str/split key #"\s*\+\s*")]
     (fn [e]
+      (js/console.log "key event:" e)
       (or
        (when (every? #(case %
                         "ctrl" (.-ctrlKey e)
                         "alt" (.-altKey e)
                         "shift" (.-shiftKey e)
+                        "esc" (= 27 (.-keyCode e))
                         (= (str/upper-case %) (String/fromCharCode (.-keyCode e)))) keys)
          (.preventDefault e)
          (action e)

@@ -34,3 +34,5 @@
 (reg-sub :pane-dialog (fn [db _] (:pane-dialog db)))
 
 (reg-sub :selected-pane-id (fn [db _] (:selected-pane db)))
+
+(reg-sub :content-data (fn [db [id]] (-> db :content-data id)))

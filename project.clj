@@ -39,13 +39,10 @@
                  [prismatic/plumbing "0.5.5"]
                  [ring-middleware-format "0.7.2"]]
 
-  :plugins [[lein-environ "1.0.2"]
-            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
+  :plugins [[lein-environ "1.1.0"]
+            [lein-cljsbuild "1.1.7"]
             [lein-asset-minifier "0.2.7"
-             :exclusions [org.clojure/clojure]]
-            ;; [refactor-nrepl "2.3.1"]
-            ;; [cider/cider-nrepl "0.14.0"]
-            ]
+             :exclusions [org.clojure/clojure]]]
 
   :ring {:handler worktv.handler/app
          :uberwar-name "worktv.war"}
@@ -101,21 +98,22 @@
 
 
 
-  :profiles {:dev {:repl-options {:init-ns worktv.repl
-                                  :nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
 
-                   :dependencies [[ring/ring-mock "0.3.0"]
-                                  [ring/ring-devel "1.5.0"]
-                                  [prone "1.1.2"]
-                                  [figwheel-sidecar "0.5.16"]
-                                  [org.clojure/tools.nrepl "0.2.13"]
-                                  [cider/piggieback "0.3.6"]
-                                  [pjstadig/humane-test-output "0.8.1"]
-                                  ]
+  :profiles {:dev {:repl-options {:init-ns worktv.repl}
+                   :dependencies [[cider/piggieback "0.3.10"]
+                                  [binaryage/devtools "0.9.10"]
+                                  [ring/ring-mock "0.3.2"]
+                                  [ring/ring-devel "1.7.0"]
+                                  [prone "1.6.1"]
+                                  [figwheel-sidecar "0.5.17"]
+                                  [nrepl "0.4.5"]
+                                  [pjstadig/humane-test-output "0.8.3"]
+
+ ]
 
                    :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.5.16"]
-                             ]
+                   :plugins [[lein-figwheel "0.5.17"]
+]
 
                    :injections [(require 'pjstadig.humane-test-output)
                                 (pjstadig.humane-test-output/activate!)]

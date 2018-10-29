@@ -8,7 +8,7 @@
             [worktv.events :refer [init-events]]
             [worktv.layout :as l :refer [preview-page]]
             [worktv.subs :refer [init-subs]]
-            [worktv.utils :refer [event-no-default]]))
+            [worktv.utils :refer [event-no-default handle-keys]]))
 
 (init-events)
 (init-subs)
@@ -64,10 +64,10 @@
 (defn current-page []
   (let [[page page-menu] (as-> @(subscribe [:current-page]) p
                            (if-not (vector? p) [(or p #'home-page) default-menu] p))]
-    (js/console.log "page?" (nil? page) " page-menu?" (nil? page-menu))
-    [:div.container-fluid.fill.full
-     [menu-bar page-menu]
-     [:div.row-fluid.fill.full
+    [:div.container-fluid.full
+     {:on-key-down (handle-keys "esc" #(dispatch [:design]))}
+     (when page-menu [menu-bar page-menu])
+     [:div.row-fluid.full
       [page]]]))
 
 ;; -------------------------

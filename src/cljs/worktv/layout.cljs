@@ -99,7 +99,7 @@
 (defmulti pane-view :type)
 
 (defmethod pane-view :content-pane [pane]
-  [:div.fill.full
+  [:div.full
    (when *edit-mode*
      {:on-click #(dispatch [:select-pane (:id pane)])
       :on-double-click (event-no-default #(show-editor pane))
@@ -131,19 +131,13 @@
      [:iframe {:frame-border 0 :src url :style {:margin "5px" :width "100%" :height "100%"}} ]]
     [:video {:src url :class (if fill? "fill" "")}]))
 
-(defn data-view [url template refresh]
-  (with-let [data (atom nil)
-             load (fn []
-                    (GET url :handler #(reset! data %) :response-format :json
-                         :error-handler #(js/console.log "failed fetching " url ";" %)))
-             _ (load)]
-    (js/setTimeout load (* (Math/max 60 refresh) 1000))
+(defn data-view [id]
+  (with-let [data (subscribe [:content-data id])]
     [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
                ;; {:__html (js/Mustache.render template (clj->js (or @data #js {})))}
-               {:__html ((js/Handlebars.compile template) (clj->js (or @data #js {})))}}]))
+               {:__html @data}}]))
 
 (defmethod content-view :custom [{:keys [url template title refresh-interval]}]
-  (js/console.log "custom:" url)
   (if (and url template)
     [data-view url template refresh-interval]
     [:div.fit "Missing url and/or template"]))
@@ -155,16 +149,16 @@
   [:div.fill "blank content"])
 
 (defmethod content-view :slides [{:keys [active slides] :or {active 0} :as pane}]
-  [:div.carousel-slide
+  [:div.carousel-slide.full
    [:ol.carousel-indicators
     (for [i (range (count (:slides pane)))]
       ^{:key i}[:li {:data-slide-to i}])]
-   [:div.carousel-inner
+   [:div.carousel-inner.full
     (doall
      (map-indexed
       (fn[i slide] ^{:key i}
-        [:div.item (when (= active i) {:class "active"})
-         [:div (pane-view slide)]]) (:slides pane)))]
+        [:div.item.full (when (= active i) {:class "active"})
+         [:div.full (pane-view slide)]]) (:slides pane)))]
 
    [:div {:style {:position "absolute" :bottom "10px" :width "100%" :text-align "center"}}
     (when *edit-mode*

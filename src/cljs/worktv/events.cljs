@@ -12,6 +12,30 @@
 
 (def log js/console.log)
 
+(defmulti load-content-data :content-type)
+(defmethod load-content-data :default [_])
+(defmethod load-content-data :custom [{:keys [url id template] :as pane}]
+  (GET url :handler #(dispatch
+                      [:assoc-in-db [:content-data id]
+                       ((js/Handlebars.compile template) (clj->js (or % {})))])
+       :response-format :json
+       :error-handler #(js/console.log "failed fetching " url ";" %)))
+
+(defmulti play-content :content-type)
+(defmethod play-content :default [_])
+(defmethod play-content :chart [pane])
+
+(defmethod play-content :custom [{:keys [refresh] :as pane}]
+  (let [timeout (js/setTimeout #(load-content-data pane) (* (Math/max 60 refresh) 1000))]
+    (dispatch [:assoc-in-db [:timers] conj timeout])))
+
+(defmethod play-content :slides [{:keys [id slides interval] :as pane}]
+  (let [advance-fn (fn[]
+                     (dispatch [:update-in [:current-project :layout id :active]
+                                #(-> % inc (rem (count slides)))]))
+        timeout (js/setTimeout advance-fn (* interval 1000))]
+    (dispatch [:assoc-in-db [:timers] conj timeout])))
+
 (reg-fx
  :xhr
  (fn [{:keys [req on-success on-error on-complete]}]
@@ -44,6 +68,12 @@
                 (dispatch (into [(:error event) error] more)))
          (dispatch (into [event value] more)))))))
 
+(reg-fx
+ :play
+ (fn [layout]
+   (doseq [[_ pane] layout :when (= :content-pane (:type pane))]
+     (play-content pane))))
+
 (reg-event-fx
  :init
  (fn [{:keys[db]} _]
@@ -55,6 +85,11 @@
  :assoc-in-db
  (fn [db [_ ks value]]
    (assoc-in db ks value)))
+
+(reg-event-db
+ :updated-in-db
+ (fn [db [_ ks f value]]
+   (update-in db ks f value)))
 
 (reg-event-fx :route (fn [_ [_ route]] {:route route}))
 
@@ -227,3 +262,8 @@
  :slide-active
  (fn [db [_ pane index]]
    (-> db (assoc-in [:current-project :layout (:id pane) :active] index))))
+
+(reg-event-fx
+ :play-project
+ (fn [{:keys [db]} [_]]
+   {:play (-> db :current-project :layout)}))
