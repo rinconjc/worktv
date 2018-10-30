@@ -179,9 +179,9 @@
 
 (defn slides-form [form]
   [:form.form
-   [:div.col-md-2
-    [c/input {:type "number" :label "Transition Interval" :model [form :interval]}]
-    [c/input {:type "number" :label "# of Slides" :model [form :count]}]]])
+   [:div.row
+    [:div.col-md-2.col-sm-5
+     [c/input {:type "number" :label "Transition Interval (secs)" :model [form :interval]}]]]])
 
 (defn rich-editor [attrs]
   (r/create-class

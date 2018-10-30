@@ -5,7 +5,8 @@
             [re-frame.core :refer [dispatch reg-event-db reg-event-fx reg-fx]]
             [secretary.core :as secretary]
             [worktv.db :as db]
-            [worktv.utils :refer [async-http]]))
+            [worktv.utils :refer [async-http]]
+            [accountant.core :as accountant]))
 
 (defn init-events
   "noop function to make a dummy require entry" [])
@@ -31,9 +32,10 @@
 
 (defmethod play-content :slides [{:keys [id slides interval] :as pane}]
   (let [advance-fn (fn[]
-                     (dispatch [:update-in [:current-project :layout id :active]
+                     (dispatch [:update-in-db [:current-project :layout id :active]
                                 #(-> % inc (rem (count slides)))]))
         timeout (js/setTimeout advance-fn (* interval 1000))]
+    (dispatch [:slide-active pane 0])
     (dispatch [:assoc-in-db [:timers] conj timeout])))
 
 (reg-fx
@@ -52,7 +54,9 @@
 (reg-fx
  :route
  (fn [route]
-   (secretary/dispatch! route)))
+   (accountant/navigate! route)
+   ;; (secretary/dispatch! route)
+   ))
 
 (reg-fx
  :dispatch-chan
@@ -70,8 +74,9 @@
 
 (reg-fx
  :play
- (fn [layout]
-   (doseq [[_ pane] layout :when (= :content-pane (:type pane))]
+ (fn [panes]
+   (js/console.log "play fx:" panes)
+   (doseq [[_ pane] panes :when (= :content-pane (:type pane))]
      (play-content pane))))
 
 (reg-event-fx
@@ -87,7 +92,7 @@
    (assoc-in db ks value)))
 
 (reg-event-db
- :updated-in-db
+ :update-in-db
  (fn [db [_ ks f value]]
    (update-in db ks f value)))
 
@@ -266,4 +271,5 @@
 (reg-event-fx
  :play-project
  (fn [{:keys [db]} [_]]
+   (js/console.log "playing project")
    {:play (-> db :current-project :layout)}))

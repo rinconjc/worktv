@@ -287,7 +287,7 @@
 
 (defn preview-page []
   (binding [*edit-mode* false]
-    (if @current-design
+    (when @current-design
       [:div.preview
        {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
        [:div.fill.full
