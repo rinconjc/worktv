@@ -288,7 +288,9 @@
 (defn preview-page []
   (binding [*edit-mode* false]
     (when @current-design
-      [:div.preview
-       {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
-       [:div.fill.full
-        (pane-view (pane-by-id 1))]])))
+      (with-let []
+        [:div.preview
+                 {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
+                 [:div.fill.full
+                  (pane-view (pane-by-id 1))]]
+        (finally (dispatch [:stop-playing]))))))

@@ -96,7 +96,7 @@
 
 (secretary/defroute "/preview" []
   (js/console.log "previewing project")
-  (dispatch [:play-project])
+  (dispatch [:start-playing])
   (dispatch [:current-page [#'preview-page nil]]))
 
 (secretary/defroute "/show/:folder/:proj-id" [folder proj-id]

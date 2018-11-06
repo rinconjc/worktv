@@ -34,9 +34,9 @@
   (let [advance-fn (fn[]
                      (dispatch [:update-in-db [:current-project :layout id :active]
                                 #(-> % inc (rem (count slides)))]))
-        timeout (js/setTimeout advance-fn (* interval 1000))]
+        timeout (js/setInterval advance-fn (* interval 1000))]
     (dispatch [:slide-active pane 0])
-    (dispatch [:assoc-in-db [:timers] conj timeout])))
+    (dispatch [:update-in-db [:timers] conj timeout])))
 
 (reg-fx
  :xhr
@@ -78,6 +78,13 @@
    (js/console.log "play fx:" panes)
    (doseq [[_ pane] panes :when (= :content-pane (:type pane))]
      (play-content pane))))
+
+(reg-fx
+ :stop-timers
+ (fn [timers]
+   (doseq [t timers]
+     (js/clearInterval t))
+   (dispatch [:assoc-in-db [:timers] []])))
 
 (reg-event-fx
  :init
@@ -269,7 +276,11 @@
    (-> db (assoc-in [:current-project :layout (:id pane) :active] index))))
 
 (reg-event-fx
- :play-project
+ :start-playing
  (fn [{:keys [db]} [_]]
-   (js/console.log "playing project")
    {:play (-> db :current-project :layout)}))
+
+(reg-event-fx
+ :stop-playing
+ (fn [{:keys [db]} [_]]
+   {:stop-timers (:timers db)}))
