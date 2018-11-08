@@ -90,3 +90,6 @@
 .drag-over {
   border: 2px solid #00E !important;
 }
+.preview * * .split-pane2 {
+  border: none !important;
+}

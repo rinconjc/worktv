@@ -203,3 +203,8 @@
 
 (defn html-form [form]
   [rich-editor (assoc @form :on-change #(swap! form assoc :content % ))])
+
+(defn publish-form [data]
+  [:form.form
+   [c/input {:type "text" :label "Name" :model [data :name] :placeholder "unique name of your publishing"}]
+   [:div (str (.-origin js/location) "/view/" (:name @data))]])

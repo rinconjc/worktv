@@ -1,31 +1,25 @@
 (ns worktv.layout
   (:require [ajax.core :refer [GET]]
-            [cljs.core.async :refer [<! chan]]
-            [cljs.reader :refer [read-string]]
             [commons-ui.core :as c]
+            [re-frame.core :refer [dispatch subscribe]]
             [reagent.core :as r :refer [atom] :refer-macros [with-let]]
-            [reagent.session :as session]
             [secretary.core :as secretary]
-            [worktv.backend :as b]
-            [worktv.utils :as u]
+            [worktv.db :as db]
+            [worktv.events :refer [init-events]]
             [worktv.splitter :refer [splitter]]
+            [worktv.subs :refer [init-subs]]
+            [worktv.utils :as u :refer [event-no-default handle-keys]]
             [worktv.views
              :as
              v
              :refer
-             [chart-form modal modal-dialog save-form search-project-form]]
-            [cljsjs.mustache]
-            [worktv.views :refer [web-page-form]]
-            [worktv.utils :refer [handle-keys]]
-            [worktv.views :refer [slides-form]]
-            [re-frame.core :refer [subscribe]]
-            [worktv.subs :refer [init-subs]]
-            [worktv.events :refer [init-events]]
-            [re-frame.core :refer [dispatch]]
-            [worktv.db :as db]
-            [worktv.utils :refer [event-no-default]]
-            [worktv.views :refer [html-form]])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+             [chart-form
+              html-form
+              modal-dialog
+              save-form
+              search-project-form
+              slides-form
+              web-page-form]]))
 
 (init-subs)
 (init-events)
@@ -110,7 +104,7 @@
       :on-drop (event-no-default
                 #(do (show-editor
                       (merge pane (db/default-content
-                                    (-> % .-dataTransfer (.getData "text/plain") keyword))))
+                                   (-> % .-dataTransfer (.getData "text/plain") keyword))))
                      (-> % .-target .-classList (.remove "drag-over"))))
       :class (when (= (:id pane) @(subscribe [:selected-pane-id]))  "selected-pane")})
    (content-view pane)])
@@ -223,8 +217,10 @@
                      :content [search-project-form]}]))
 
 (defn handle-publish-project []
-  ;; show prompt for publishing path
-  )
+  (let [data (atom {})]
+    (dispatch [:modal {:title "Publish Project"
+                       :ok-event [:publish-project @data]
+                       :content [v/publish-form data]}])))
 ;; (defn do-publish-project []
 ;;   (go
 ;;     (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
@@ -290,7 +286,7 @@
     (when @current-design
       (with-let []
         [:div.preview
-                 {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
-                 [:div.fill.full
-                  (pane-view (pane-by-id 1))]]
+         {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
+         [:div.fill.full
+          (pane-view (pane-by-id 1))]]
         (finally (dispatch [:stop-playing]))))))

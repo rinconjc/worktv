@@ -123,6 +123,17 @@
                             project-id (assoc (:body-params req) :owner (:user-id req))))
                     (status {} 204))))
 
+           (POST "/publish/:project-id/:pub-name" [project-id pub-name]
+                 (fn [_]
+                   (if-let [{error :error} (db/publish-project project-id pub-name)]
+                     (status {:error (str "Failed publishing project " error)} 400)
+                     (status {} 204))))
+
+           (GET "/published/:pub-name" [pub-name]
+                (if-let [{proj-id :project_id} (db/get-published pub-name)]
+                  (:body (db/get-project proj-id))
+                  (status {:error (str "No published project with name " pub-name)} 404)))
+
            (GET "/search" []
                 (fn [req] (let [{:keys [q type]} (-> req :params)
                                 result (search-images q type)]
