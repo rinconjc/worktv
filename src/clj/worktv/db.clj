@@ -2,10 +2,10 @@
   (:require [clojure.edn :as edn]
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [hikari-cp.core :as cp]
             [ragtime.jdbc :as r]
-            [ragtime.repl :as rr]
-            [clojure.tools.logging :as log])
+            [ragtime.repl :as rr])
   (:import java.nio.ByteBuffer
            java.security.SecureRandom
            [java.sql Clob SQLException]
@@ -93,9 +93,10 @@
     (not (get-project proj-id)) {:error "Project not found"}
     (get-published path) {:error (str "Name " path " already in use")}
     :else (try
-            (jdbc/insert! @db-spec "published_projects"
-                          {:project_id proj-id
-                           :path path})
+            (first
+             (jdbc/insert! @db-spec "published_projects"
+                                 {:project_id proj-id
+                                  :path path}))
             (catch SQLException e
               (log/error e "failed publishing" proj-id)
               {:error "unknown error"}))))

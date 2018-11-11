@@ -185,10 +185,11 @@
 
 (reg-event-fx
  :publish-project
- (fn[_ [_ project-id path]]
-   {:xhr {:req [PUT (str "/projects/" path) {:params {:id project-id}}]
-          :on-success [:assoc-in-db [:alert] {:success (str "Project Published to " path)}]
-          :on-error [:assoc-in-db [:alert :error]]}}))
+ (fn [{:keys[db]} [_ data]]
+   (when-let [cur-proj (:current-project db)]
+     {:xhr {:req [POST (str "/api/publish/" (:id cur-proj) "/" (:name data))]
+            :on-success [:assoc-in-db [:alert] {:success (str "Project Published to " (:name data))}]
+            :on-error [:assoc-in-db [:alert :error]]}})))
 
 (reg-event-fx
  :design

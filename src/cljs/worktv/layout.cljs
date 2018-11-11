@@ -26,17 +26,7 @@
 
 (def ^:dynamic *edit-mode* true)
 
-
 (def current-design (subscribe [:current-project]))
-;; (def current-design
-;;   (let [model (session/cursor [:current-design])]
-;;     (when-not @model
-;;       (session/put! :current-design blank-design))
-;;     model))
-
-;; (def selected-pane-id (atom nil))
-;; (def alert (atom nil))
-
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -197,8 +187,8 @@
     :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
                               "ctrl+v" #(dispatch [:split-pane :vertical])
                               "ctrl+k" #(dispatch [:delete-pane]))}
-   [alert @(subscribe [:alert])]
    [modal-dialog]
+   [alert @(subscribe [:alert])]
    (when @current-design
      (pane-view (pane-by-id 1)))])
 
@@ -219,7 +209,7 @@
 (defn handle-publish-project []
   (let [data (atom {})]
     (dispatch [:modal {:title "Publish Project"
-                       :ok-event [:publish-project @data]
+                       :ok-fn #(dispatch [:publish-project @data])
                        :content [v/publish-form data]}])))
 ;; (defn do-publish-project []
 ;;   (go

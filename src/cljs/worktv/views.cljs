@@ -5,8 +5,7 @@
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
             [worktv.utils :as u]
             [worktv.backend :as b]
-            [re-frame.core :refer [subscribe]]
-            [re-frame.core :refer [dispatch]])
+            [re-frame.core :refer [subscribe dispatch]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -37,23 +36,27 @@
 
 (defn modal-dialog []
   (with-let [modal (subscribe [:modal])]
-    (when-let [{:keys [title ok-fn content ok-event]} @modal]
+    (when-let [{:keys [title ok-fn content ok-event] :as modal} @modal]
       [:div.modal {:style {:display "block"} :tabIndex -1}
        [:div.modal-dialog
-        [:div.modal-content
+        [:form.modal-content
+         (when (or (fn? ok-fn) ok-event)
+           {:on-submit (u/event-no-default
+                        (fn [_]
+                          (if (fn? ok-fn) (ok-fn) (dispatch ok-event))
+                          (dispatch [:close-modal])))})
          [:div.modal-header [:h4 title]]
          [:div.modal-body
-          (when (:error @modal)
-            [c/alert (:error @modal)])
-          content]
-         [:div.modal-footer
-          (when (or (fn? ok-fn) ok-event)
-            [:button.btn.btn-primary
-             {:on-click (or ok-fn #(dispatch ok-event))} "OK"])
-          [:button.btn {:on-click #(dispatch [:close-modal])} "Close"]]]]])))
+          (when (:error modal)
+            [c/alert (:error modal)])
+          content
+          [:div.modal-footer
+           (when (or (fn? ok-fn) ok-event)
+             [:button.btn.btn-primary "OK"])
+           [:button.btn {:type "button" :on-click #(dispatch [:close-modal])} "Close"]] ]]]])))
 
 (defn save-form [data]
-  [:form.form
+  [:div
    [c/input {:type "text" :id "name" :label "Project Name:" :placeholder "Name of your projects"
              :model [data :name] :validator #(not (str/blank? %))}]
    [c/input {:type "radio" :name "folder" :label "Sharing:" :text "Public" :model [data :folder]
@@ -63,13 +66,12 @@
 
 (defn search-project-form []
   (with-let [proj-search (subscribe [:project-search])]
-    [:form.form
-     [:div.list-group
-      (doall
-       (for [{:keys [id name description]} (:projects @proj-search)]
-         ^{:key id}[:a.list-group-item {:href "#" :on-click #(dispatch [:project-search-select id])}
-                    [:h4.list-group-item-heading name]
-                    [:p.list-group-item-text description]]))]]))
+    [:div.list-group
+     (doall
+      (for [{:keys [id name description]} (:projects @proj-search)]
+        ^{:key id}[:a.list-group-item {:href "#" :on-click #(dispatch [:project-search-select id])}
+                   [:h4.list-group-item-heading name]
+                   [:p.list-group-item-text description]]))]))
 
 (defn y-serie-form [add-fn]
   (with-let [form (atom {})]
@@ -205,6 +207,7 @@
   [rich-editor (assoc @form :on-change #(swap! form assoc :content % ))])
 
 (defn publish-form [data]
-  [:form.form
-   [c/input {:type "text" :label "Name" :model [data :name] :placeholder "unique name of your publishing"}]
+  [:div
+   [c/input {:type "text" :label "Name" :model [data :name]
+             :placeholder "unique name of your publishing" :required true}]
    [:div (str (.-origin js/location) "/view/" (:name @data))]])

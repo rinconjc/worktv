@@ -92,3 +92,9 @@ a:hover {
   position:absolute;
   z-index:9001;
 }
+
+/* validation pseudo styles */
+
+input:invalid {
+  border: 2px solid salmon;
+}
