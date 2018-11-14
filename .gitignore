@@ -9,12 +9,13 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 /resources/public/js
+/resources/public/cljs-out
 /out
 /.repl
 *.log
 /.env
 .*
-
+resources/config.edn
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml

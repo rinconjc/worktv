@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [compojure.core :refer [context defroutes GET POST PUT]]
-            [compojure.route :refer [not-found resources]]
+            [compojure.route :refer [resources]]
             [config.core :refer [env]]
             [hiccup.core :refer [html]]
             [hiccup.page :refer [html5 include-css include-js]]
@@ -14,7 +14,7 @@
             [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.params :refer [wrap-params]]
-            [ring.util.response :refer [redirect set-cookie status]]
+            [ring.util.response :refer [redirect set-cookie status not-found]]
             [worktv.db :as db]
             [worktv.middleware :refer [wrap-middleware]]))
 
@@ -45,12 +45,7 @@
           (redirect "/login"))))))
 
 (def mount-target
-  [:div#app.fill
-   (if (env :dev)
-     [:h3 "ClojureScript has not been compiled!"]
-     [:p "please run "
-      [:b "lein figwheel"]
-      " in order to start the compiler"])])
+  [:div#app.fill])
 
 (defn head []
   [:head
@@ -79,7 +74,7 @@
    (head)
    [:body
     mount-target
-    (include-js "/js/app.js")]))
+    (include-js (if (env :dev) "/cljs-out/dev-main.js"  "/js/app.js"))]))
 
 (defn wrap-csrf-cookie [handler]
   (fn [request]
@@ -131,9 +126,11 @@
                        (status {} 204)))))
 
            (GET "/published/:pub-name" [pub-name]
-                (if-let [{proj-id :project_id} (db/get-published pub-name)]
-                  {:body (db/get-project proj-id)}
-                  (not-found {:error (str "No published project with name " pub-name)})))
+                (fn [_]
+                  (log/info "get pub" pub-name)
+                  (if-let [{proj-id :project_id} (db/get-published pub-name)]
+                    {:body (db/get-project proj-id)}
+                    (not-found {:error (str "No published project with name " pub-name)}))))
 
            (GET "/search" []
                 (fn [req] (let [{:keys [q type]} (-> req :params)

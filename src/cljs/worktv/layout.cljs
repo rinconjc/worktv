@@ -211,12 +211,6 @@
     (dispatch [:modal {:title "Publish Project"
                        :ok-fn #(dispatch [:publish-project @data])
                        :content [v/publish-form data]}])))
-;; (defn do-publish-project []
-;;   (go
-;;     (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
-;;       (if result
-;;         (secretary/dispatch! (str "/show/" (:folder @current-design) "/" (:id @current-design)))
-;;         (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
 
 (defn design-menu []
   [:nav.navbar-collapse-collapse
@@ -280,3 +274,11 @@
          [:div.fill.full
           (pane-view (pane-by-id 1))]]
         (finally (dispatch [:stop-playing]))))))
+
+(defn page-not-found []
+  [:div [:h2 "Oops! Page not found!"]])
+
+(defn progress-page []
+  [:div
+   [:h1.text-center
+    [:i.fa.fa-spinner.fa-spin.fa-3x]]])

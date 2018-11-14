@@ -1,4 +1,4 @@
-(ns worktv.core
+(ns ^:figwheel-hooks worktv.core
   (:require [accountant.core :as accountant]
             [commons-ui.core :as c]
             [re-frame.core :refer [dispatch dispatch-sync subscribe]]
@@ -6,7 +6,7 @@
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [worktv.events :refer [init-events]]
-            [worktv.layout :as l :refer [preview-page]]
+            [worktv.layout :as l :refer [preview-page progress-page]]
             [worktv.subs :refer [init-subs]]
             [worktv.utils :refer [event-no-default handle-keys]]))
 
@@ -64,6 +64,7 @@
 (defn current-page []
   (let [[page page-menu] (as-> @(subscribe [:current-page]) p
                            (if-not (vector? p) [(or p #'home-page) default-menu] p))]
+    (js/console.log "rendering page:" page)
     [:div.container-fluid.full
      {:on-key-down (handle-keys "esc" #(dispatch [:design]))}
      (when page-menu [menu-bar page-menu])
@@ -103,6 +104,9 @@
   (dispatch [:load-project proj-id])
   (dispatch [:current-page #'preview-page]))
 
+(secretary/defroute "/view/:pub-name" [pub-name]
+  (dispatch-sync [:current-page [#'progress-page nil]])
+  (dispatch [:show-publishing pub-name [#'preview-page nil]]))
 
 ;; -------------------------
 ;; Initialize app
@@ -112,7 +116,7 @@
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
   )
 
-(defn mount-root []
+(defn ^:after-load mount-root []
   (reagent/render [current-page] (.getElementById js/document "app")))
 
 (defn init! []
@@ -129,3 +133,4 @@
   (js/Handlebars.registerHelper
    "round" (fn [value opts]
              (-> value js/Number (.toFixed (-> opts .-hash .-decimals))))))
+(init!)

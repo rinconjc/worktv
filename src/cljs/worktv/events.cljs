@@ -1,12 +1,12 @@
 (ns worktv.events
-  (:require [ajax.core :refer [GET POST PUT]]
+  (:require [accountant.core :as accountant]
+            [ajax.core :refer [GET POST PUT]]
             [cljs.core.async :refer-macros [go]]
             [clojure.core.match :refer-macros [match]]
             [re-frame.core :refer [dispatch reg-event-db reg-event-fx reg-fx]]
-            [secretary.core :as secretary]
+            [worktv.layout :refer [page-not-found]]
             [worktv.db :as db]
-            [worktv.utils :refer [async-http]]
-            [accountant.core :as accountant]))
+            [worktv.utils :refer [async-http]]))
 
 (defn init-events
   "noop function to make a dummy require entry" [])
@@ -55,8 +55,7 @@
  :route
  (fn [route]
    (accountant/navigate! route)
-   ;; (secretary/dispatch! route)
-   ))
+   (secretary.core/dispatch! route)))
 
 (reg-fx
  :dispatch-chan
@@ -285,3 +284,17 @@
  :stop-playing
  (fn [{:keys [db]} [_]]
    {:stop-timers (:timers db)}))
+
+(reg-event-fx
+ :show-publishing
+ (fn [{:keys [db]} [_ pub-name page]]
+   {:xhr {:req [GET (str "/api/published/" pub-name)]
+          :on-success [:show-project page]
+          :on-error [:current-page #'page-not-found]}}))
+
+(reg-event-fx
+ :show-project
+ (fn [{:keys[db]} [_ page proj-data]]
+   {:db (assoc db :current-project proj-data)
+    :dispatch-n [[:start-playing]
+                 [:current-page page]]}))
