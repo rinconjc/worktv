@@ -64,9 +64,8 @@
 (defn current-page []
   (let [[page page-menu] (as-> @(subscribe [:current-page]) p
                            (if-not (vector? p) [(or p #'home-page) default-menu] p))]
-    (js/console.log "rendering page:" page)
     [:div.container-fluid.full
-     {:on-key-down (handle-keys "esc" #(dispatch [:design]))}
+     ;; {:on-key-down (handle-keys "esc" #(dispatch [:design]))}
      (when page-menu [menu-bar page-menu])
      [:div.row-fluid.full
       [page]]]))

@@ -83,7 +83,7 @@
            [:i.fa.fa-plus]]]]))
 
 (defn chart-form [form]
-  [:form.form {:on-submit #(.preventDefault %)}
+  [:div
    [c/input {:type "text" :label "Title" :model [form :title]}]
    [c/input {:type "text" :label "Data source URL" :model [form :url]}]
    [:div.form.form-inline
@@ -108,7 +108,7 @@
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
 (defn web-page-form [form]
-  [:form.form
+  [:div
    [c/input {:type "text" :label "URL" :placeholder "Past page URL" :model [form :url]}]
    (if-let [url (:url @form)]
      [:div.full.fill
@@ -148,7 +148,7 @@
       [image-list @(r/track search-fn (:url @form))]]]))
 
 (defn custom-form [form]
-  [:form.form
+  [:div
    [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
    [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"}]
    [c/input {:type "text" :label "Refresh Interval (secs)" :model [form :refresh-interval]
@@ -180,10 +180,9 @@
              (js/console.log "error:" (clj->js error)))))))])
 
 (defn slides-form [form]
-  [:form.form
-   [:div.row
-    [:div.col-md-2.col-sm-5
-     [c/input {:type "number" :label "Transition Interval (secs)" :model [form :interval]}]]]])
+  [:div.row
+   [:div.col-md-2.col-sm-5
+    [c/input {:type "number" :label "Transition Interval (secs)" :model [form :interval]}]]])
 
 (defn rich-editor [attrs]
   (r/create-class
