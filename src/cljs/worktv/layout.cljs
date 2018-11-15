@@ -5,28 +5,16 @@
             [reagent.core :as r :refer [atom] :refer-macros [with-let]]
             [secretary.core :as secretary]
             [worktv.db :as db]
-            [worktv.events :refer [init-events]]
             [worktv.splitter :refer [splitter]]
-            [worktv.subs :refer [init-subs]]
             [worktv.utils :as u :refer [event-no-default handle-keys]]
-            [worktv.views
-             :as
-             v
-             :refer
-             [chart-form
-              html-form
-              modal-dialog
-              save-form
-              search-project-form
+            [worktv.views :as v :refer [chart-form html-form modal-dialog save-form search-project-form
               slides-form
               web-page-form]]))
 
-(init-subs)
-(init-events)
-
 (def ^:dynamic *edit-mode* true)
+(def ^:dynamic *current-project* nil)
 
-(def current-design (subscribe [:current-project]))
+;; (def current-design (subscribe [:current-project]))
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -34,11 +22,7 @@
     data))
 
 (defn pane-by-id [id]
-  (-> @current-design :layout (get id)))
-
-(defn update-pane [pane]
-  (swap! current-design update :layout assoc (:id pane) pane)
-  pane)
+  (-> @*current-project* :layout (get id)))
 
 (defmulti content-editor (comp :content-type deref))
 
@@ -182,18 +166,20 @@
      (:text attrs)]))
 
 (defn layout-editor []
-  [:div.fill.full
-   {:tabIndex 1
-    :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
-                              "ctrl+v" #(dispatch [:split-pane :vertical])
-                              "ctrl+k" #(dispatch [:delete-pane]))}
-   [modal-dialog]
-   [alert @(subscribe [:alert])]
-   (when @current-design
-     (pane-view (pane-by-id 1)))])
+  (with-let [current-project (subscribe [:current-project])]
+    (binding [*current-project* current-project]
+      [:div.fill.full
+       {:tabIndex 1
+        :on-key-down (handle-keys "alt+h" #(dispatch [:split-pane :horizontal])
+                                  "alt+v" #(dispatch [:split-pane :vertical])
+                                  "alt+k" #(dispatch [:delete-pane]))}
+       [modal-dialog]
+       [alert @(subscribe [:alert])]
+       (when @*current-project*
+         (pane-view (pane-by-id 1)))])))
 
 (defn handle-save-project []
-  (if (:id @current-design)
+  (if (:id @*current-project*)
     (dispatch [:save-project])
     (let [data (atom {})]
       (dispatch [:modal {:title "Save Design"
@@ -232,11 +218,7 @@
             "Preview"]]
       [:li [:a {:href "#" :title "Publish Project"
                 :on-click handle-publish-project}
-            "Publish"]]
-      [:li [:a {:href "#" :title "Show Project"
-                :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
-                               (.preventDefault %))}
-            "Show"]]]]
+            "Publish"]]]]
     [:li.dropdown
      [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
                           :aria-expanded false} "Layout" [:span.caret]]
@@ -266,8 +248,9 @@
      [layout-editor]]]])
 
 (defn preview-page []
-  (binding [*edit-mode* false]
-    (when @current-design
+  (binding [*edit-mode* false
+            *current-project* (subscribe [:current-project])]
+    (when @*current-project*
       (with-let []
         [:div.preview
          {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}

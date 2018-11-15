@@ -9,7 +9,8 @@
             [worktv.utils :refer [async-http]]))
 
 (defn init-events
-  "noop function to make a dummy require entry" [])
+  "noop function to make a dummy require entry" []
+  (js/console.log "loading events handlers"))
 
 (def log js/console.log)
 

@@ -3,7 +3,8 @@
   (:require [re-frame.subs :refer [reg-sub]]
             [clojure.string :as str]))
 
-(defn init-subs "noop function to make dummy require in core" [])
+(defn init-subs "noop function to make dummy require in core" []
+  (js/console.log "loading subscriptions"))
 
 (reg-sub :current-page (fn [db _] (:current-page db)))
 
