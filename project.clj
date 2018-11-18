@@ -91,41 +91,16 @@
                         :optimizations :none
                         :pretty-print  true}}}}
 
-
-  ;; :figwheel
-  ;; {:http-server-root "public"
-  ;;  :server-port 3447
-  ;;  :nrepl-port 7001
-  ;;  ;; :nrepl-middleware ["cemerick.piggieback/wrap-cljs-repl"]
-  ;;  :css-dirs ["resources/public/css"]
-  ;;  :ring-handler worktv.handler/app}
-
-
-
-
   :profiles {:dev {:repl-options {:init-ns worktv.repl
                                   :nrepl-middleware [cider.piggieback/wrap-cljs-repl]
                                   }
                    :dependencies [
-                                  ;; [cider/piggieback "0.3.10"]
-                                  ;; [binaryage/devtools "0.9.10"]
-                                  ;; [ring/ring-mock "0.3.2"]
-                                  ;; [ring/ring-devel "1.7.0"]
                                   [prone "1.6.1"]
-                                  ;; [figwheel-sidecar "0.5.17"]
-                                  ;; [nrepl "0.4.5"]
-                                  ;; [pjstadig/humane-test-output "0.8.3"]
                                   [com.bhauman/figwheel-main "0.1.9"]
                                   [com.bhauman/rebel-readline-cljs "0.1.4"]
                                   ]
 
                    :source-paths ["env/dev/clj"]
-                   ;; :plugins [[lein-figwheel "0.5.17"]
-                   ;;           ]
-
-                   ;; :injections [(require 'pjstadig.humane-test-output)
-                   ;;              (pjstadig.humane-test-output/activate!)]
-
                    :env {:dev true}}
 
              :uberjar {:hooks [minify-assets.plugin/hooks]

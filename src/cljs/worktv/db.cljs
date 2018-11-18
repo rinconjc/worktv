@@ -2,10 +2,10 @@
 
 (def content-types (array-map :image {:label "Image" :icon "fa-image"}
                               :video {:label "Video" :icon "fa-file-video"}
-                              :custom {:label "Data Feed" :icon "fa-code"}
+                              :custom {:label "Dynamic Template" :icon "fa-code"}
                               :chart {:label "Chart" :icon "fa-chart-bar"}
-                              :page {:label "Document" :icon "fa-newspaper"}
-                              :html {:label "Custom Content" :icon "fa-newspaper"}
+                              :page {:label "Embedded Page" :icon "fa-newspaper"}
+                              :html {:label "Rich Text" :icon "fa-newspaper"}
                               :slides {:label "Slides" :icon "fa-film"
                                        :default {:slides []}}))
 

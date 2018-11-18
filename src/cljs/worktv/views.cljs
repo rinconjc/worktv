@@ -5,7 +5,8 @@
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
             [worktv.utils :as u]
             [worktv.backend :as b]
-            [re-frame.core :refer [subscribe dispatch]])
+            [re-frame.core :refer [subscribe dispatch]]
+            [ajax.core :refer [GET]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -147,13 +148,37 @@
                                 (swap! form assoc :url url))}
       [image-list @(r/track search-fn (:url @form))]]]))
 
+(defn apply-template [template data]
+  (js/console.log "formatting..." )
+  ((js/Handlebars.compile template) (clj->js data)))
+
+(defn fetch-data [url result]
+  (when-not (str/blank? url)
+    (GET url {:handler #(reset! result %)
+              :error-handler #(js/console.log "Error " %)})))
+
 (defn custom-form [form]
-  [:div
-   [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
-   [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"}]
-   [c/input {:type "text" :label "Refresh Interval (secs)" :model [form :refresh-interval]
-             :placeholder "60"}]
-   [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]])
+  (with-let [preview-on (atom false)
+             data (atom nil)
+             output (atom nil)]
+    [:div
+     [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
+     [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"
+               :on-blur #(fetch-data (-> % .-target .-value) data)}]
+     [c/input {:type "text" :label "Refresh Interval (secs)" :model [form :refresh-interval]
+               :placeholder "60"}]
+     [:ul.nav.nav-tabs
+      [:li {:class (when-not @preview-on "active") :on-click #(reset! preview-on false)}
+       [:a {:href "#"} "Template"]]
+      [:li {:class (when @preview-on "active") :on-click #(do
+                                                            (reset! output (apply-template (:template @form) @data))
+                                                            (reset! preview-on true))}
+       [:a {:href "#"} "Preview"]]]
+     [:div.tab-content
+      [:div.tab-pane {:class (when-not @preview-on  "active")}
+       [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]]
+      [:div.tab-pane {:class (when @preview-on "active")}
+       [:div {:dangerouslySetInnerHTML {:__html @output}}]]]]))
 
 (defn with-node [data node-fn]
   (r/create-class
