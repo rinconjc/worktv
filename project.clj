@@ -13,8 +13,7 @@
                  [compojure "1.6.1"]
                  [hiccup "1.0.5"]
                  [yogthos/config "1.1"]
-                 [org.clojure/clojurescript "1.10.238"
-                  :scope "provided"]
+                 [org.clojure/clojurescript "1.10.339"]
                  [secretary "1.2.3"]
                  [venantius/accountant "0.2.4"
                   :exclusions [org.clojure/tools.reader]]
@@ -39,18 +38,15 @@
                  [prismatic/plumbing "0.5.5"]
                  [ring-middleware-format "0.7.2"]]
 
-  :plugins [[lein-environ "1.0.2"]
-            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
+  :plugins [[lein-environ "1.1.0"]
+            [lein-cljsbuild "1.1.7"]
             [lein-asset-minifier "0.2.7"
-             :exclusions [org.clojure/clojure]]
-            ;; [refactor-nrepl "2.3.1"]
-            ;; [cider/cider-nrepl "0.14.0"]
-            ]
+             :exclusions [org.clojure/clojure]]]
 
   :ring {:handler worktv.handler/app
          :uberwar-name "worktv.war"}
 
-  :min-lein-version "2.5.0"
+  :min-lein-version "2.7.1"
 
   :uberjar-name "worktv.jar"
 
@@ -63,6 +59,11 @@
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
   :resource-paths ["resources" "target/cljsbuild"]
+
+  :aliases {"fig"       ["trampoline" "run" "-m" "figwheel.main"]
+            "fig:build" ["trampoline" "run" "-m" "figwheel.main" "-b" "dev" "-r"]
+            "fig:min"   ["run" "-m" "figwheel.main" "-O" "advanced" "-bo" "dev"]
+            "fig:test"  ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" test.test-runner]}
 
   :minify-assets
   {:assets
@@ -80,46 +81,26 @@
               :externs ["externs/externs.js"]}}
             :app
             {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
-             :compiler
-             {:main "worktv.dev"
-              :asset-path "/js/out"
-              :output-to "target/cljsbuild/public/js/app.js"
-              :output-dir "target/cljsbuild/public/js/out"
-              :source-map true
-              :optimizations :none
-              :pretty-print  true}}}}
-
-
-  :figwheel
-  {:http-server-root "public"
-   :server-port 3447
-   :nrepl-port 7001
-   :nrepl-middleware ["cemerick.piggieback/wrap-cljs-repl"
-                      ]
-   :css-dirs ["resources/public/css"]
-   :ring-handler worktv.handler/app}
-
-
+             :figwheel true
+             :compiler {
+                        :main "worktv.dev"
+                        :asset-path "/js/out"
+                        :output-to "target/cljsbuild/public/js/app.js"
+                        :output-dir "target/cljsbuild/public/js/out"
+                        :source-map true
+                        :optimizations :none
+                        :pretty-print  true}}}}
 
   :profiles {:dev {:repl-options {:init-ns worktv.repl
-                                  :nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-
-                   :dependencies [[ring/ring-mock "0.3.0"]
-                                  [ring/ring-devel "1.5.0"]
-                                  [prone "1.1.2"]
-                                  [figwheel-sidecar "0.5.16"]
-                                  [org.clojure/tools.nrepl "0.2.13"]
-                                  [cider/piggieback "0.3.6"]
-                                  [pjstadig/humane-test-output "0.8.1"]
+                                  :nrepl-middleware [cider.piggieback/wrap-cljs-repl]
+                                  }
+                   :dependencies [
+                                  [prone "1.6.1"]
+                                  [com.bhauman/figwheel-main "0.1.9"]
+                                  [com.bhauman/rebel-readline-cljs "0.1.4"]
                                   ]
 
                    :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.5.16"]
-                             ]
-
-                   :injections [(require 'pjstadig.humane-test-output)
-                                (pjstadig.humane-test-output/activate!)]
-
                    :env {:dev true}}
 
              :uberjar {:hooks [minify-assets.plugin/hooks]

@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [compojure.core :refer [context defroutes GET POST PUT]]
-            [compojure.route :refer [not-found resources]]
+            [compojure.route :refer [resources]]
             [config.core :refer [env]]
             [hiccup.core :refer [html]]
             [hiccup.page :refer [html5 include-css include-js]]
@@ -14,7 +14,7 @@
             [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.params :refer [wrap-params]]
-            [ring.util.response :refer [redirect set-cookie status]]
+            [ring.util.response :refer [redirect set-cookie status not-found]]
             [worktv.db :as db]
             [worktv.middleware :refer [wrap-middleware]]))
 
@@ -45,12 +45,7 @@
           (redirect "/login"))))))
 
 (def mount-target
-  [:div#app.fill
-   (if (env :dev)
-     [:h3 "ClojureScript has not been compiled!"]
-     [:p "please run "
-      [:b "lein figwheel"]
-      " in order to start the compiler"])])
+  [:div#app.fill])
 
 (defn head []
   [:head
@@ -60,8 +55,8 @@
    (include-css (if (env :dev) "/css/site.css" "/css/site.min.css"))
    (include-css (if (env :dev) "/css/splitter.css" "/css/splitter.min.css"))
    (include-css "https://cdn.quilljs.com/1.3.6/quill.snow.css")
-   ;; (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css")
-   (include-css "/css/bootstrap.min.css")
+   (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css")
+   ;; (include-css "/css/bootstrap.min.css")
    (include-css "https://use.fontawesome.com/releases/v5.0.13/css/all.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
    (include-js "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js")
@@ -79,7 +74,7 @@
    (head)
    [:body
     mount-target
-    (include-js "/js/app.js")]))
+    (include-js (if (env :dev) "/cljs-out/dev-main.js"  "/js/app.js"))]))
 
 (defn wrap-csrf-cookie [handler]
   (fn [request]
@@ -123,6 +118,20 @@
                             project-id (assoc (:body-params req) :owner (:user-id req))))
                     (status {} 204))))
 
+           (POST "/publish/:project-id/:pub-name" [project-id pub-name]
+                 (fn [_]
+                   (let [{:keys [error]} (db/publish-project project-id pub-name)]
+                     (if error
+                       (status {:body {:error (str "Failed publishing project. " error)}} 400)
+                       (status {} 204)))))
+
+           (GET "/published/:pub-name" [pub-name]
+                (fn [_]
+                  (log/info "get pub" pub-name)
+                  (if-let [{proj-id :project_id} (db/get-published pub-name)]
+                    {:body (db/get-project proj-id)}
+                    (not-found {:error (str "No published project with name " pub-name)}))))
+
            (GET "/search" []
                 (fn [req] (let [{:keys [q type]} (-> req :params)
                                 result (search-images q type)]
@@ -135,6 +144,7 @@
                                        (-> req :headers (get "host")))
                          token (db/login-request body)
                          link (str base-url "/api/verify?token=" token)]
+                     (log/info "login link:" link)
                      (postal/send-message
                       (env :smtp)
                       {:from (env :mail-from)

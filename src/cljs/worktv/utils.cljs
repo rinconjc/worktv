@@ -135,6 +135,7 @@
                         "ctrl" (.-ctrlKey e)
                         "alt" (.-altKey e)
                         "shift" (.-shiftKey e)
+                        "esc" (= 27 (.-keyCode e))
                         (= (str/upper-case %) (String/fromCharCode (.-keyCode e)))) keys)
          (.preventDefault e)
          (action e)
@@ -145,7 +146,7 @@
 (defn event-no-default [f]
   (fn [e]
     (.preventDefault e)
-    (f)))
+    (f e)))
 
 ;; ============ hack to handle success empty responses
 (defn empty-means-nil [response]

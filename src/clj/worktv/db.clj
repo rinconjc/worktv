@@ -2,12 +2,13 @@
   (:require [clojure.edn :as edn]
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [hikari-cp.core :as cp]
             [ragtime.jdbc :as r]
             [ragtime.repl :as rr])
   (:import java.nio.ByteBuffer
            java.security.SecureRandom
-           java.sql.Clob
+           [java.sql Clob SQLException]
            java.util.Base64))
 
 (defn- clob->str [^Clob clob]
@@ -80,6 +81,22 @@
 
 (defn update-project [proj-id proj]
   (first (jdbc/update! @db-spec "projects"
-                 (-> proj (select-keys [:name :layout])
-                     (update :layout pr-str))
-                 ["owner=? and id=?" (:owner proj) proj-id])))
+                       (-> proj (select-keys [:name :layout])
+                           (update :layout pr-str))
+                       ["owner=? and id=?" (:owner proj) proj-id])))
+
+(defn get-published [name]
+  (first (jdbc/query @db-spec ["select * from published_projects where path=?" name])))
+
+(defn publish-project [proj-id path]
+  (cond
+    (not (get-project proj-id)) {:error "Project not found"}
+    (get-published path) {:error (str "Name " path " already in use")}
+    :else (try
+            (first
+             (jdbc/insert! @db-spec "published_projects"
+                                 {:project_id proj-id
+                                  :path path}))
+            (catch SQLException e
+              (log/error e "failed publishing" proj-id)
+              {:error "unknown error"}))))

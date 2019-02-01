@@ -5,8 +5,8 @@
             [reagent.core :refer [atom] :as r :refer-macros [with-let]]
             [worktv.utils :as u]
             [worktv.backend :as b]
-            [re-frame.core :refer [subscribe]]
-            [re-frame.core :refer [dispatch]])
+            [re-frame.core :refer [subscribe dispatch]]
+            [ajax.core :refer [GET]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -37,23 +37,27 @@
 
 (defn modal-dialog []
   (with-let [modal (subscribe [:modal])]
-    (when-let [{:keys [title ok-fn content ok-event]} @modal]
+    (when-let [{:keys [title ok-fn content ok-event] :as modal} @modal]
       [:div.modal {:style {:display "block"} :tabIndex -1}
        [:div.modal-dialog
-        [:div.modal-content
+        [:form.modal-content
+         (when (or (fn? ok-fn) ok-event)
+           {:on-submit (u/event-no-default
+                        (fn [_]
+                          (if (fn? ok-fn) (ok-fn) (dispatch ok-event))
+                          (dispatch [:close-modal])))})
          [:div.modal-header [:h4 title]]
          [:div.modal-body
-          (when (:error @modal)
-            [c/alert (:error @modal)])
-          content]
-         [:div.modal-footer
-          (when (or (fn? ok-fn) ok-event)
-            [:button.btn.btn-primary
-             {:on-click (or ok-fn #(dispatch ok-event))} "OK"])
-          [:button.btn {:on-click #(dispatch [:close-modal])} "Close"]]]]])))
+          (when (:error modal)
+            [c/alert (:error modal)])
+          content
+          [:div.modal-footer
+           (when (or (fn? ok-fn) ok-event)
+             [:button.btn.btn-primary "OK"])
+           [:button.btn {:type "button" :on-click #(dispatch [:close-modal])} "Close"]] ]]]])))
 
 (defn save-form [data]
-  [:form.form
+  [:div
    [c/input {:type "text" :id "name" :label "Project Name:" :placeholder "Name of your projects"
              :model [data :name] :validator #(not (str/blank? %))}]
    [c/input {:type "radio" :name "folder" :label "Sharing:" :text "Public" :model [data :folder]
@@ -63,13 +67,12 @@
 
 (defn search-project-form []
   (with-let [proj-search (subscribe [:project-search])]
-    [:form.form
-     [:div.list-group
-      (doall
-       (for [{:keys [id name description]} (:projects @proj-search)]
-         ^{:key id}[:a.list-group-item {:href "#" :on-click #(dispatch [:project-search-select id])}
-                    [:h4.list-group-item-heading name]
-                    [:p.list-group-item-text description]]))]]))
+    [:div.list-group
+     (doall
+      (for [{:keys [id name description]} (:projects @proj-search)]
+        ^{:key id}[:a.list-group-item {:href "#" :on-click #(dispatch [:project-search-select id])}
+                   [:h4.list-group-item-heading name]
+                   [:p.list-group-item-text description]]))]))
 
 (defn y-serie-form [add-fn]
   (with-let [form (atom {})]
@@ -81,7 +84,7 @@
            [:i.fa.fa-plus]]]]))
 
 (defn chart-form [form]
-  [:form.form {:on-submit #(.preventDefault %)}
+  [:div
    [c/input {:type "text" :label "Title" :model [form :title]}]
    [c/input {:type "text" :label "Data source URL" :model [form :url]}]
    [:div.form.form-inline
@@ -106,7 +109,7 @@
       [y-serie-form #(swap! form update :y-series assoc %1 %2)]]]]])
 
 (defn web-page-form [form]
-  [:form.form
+  [:div
    [c/input {:type "text" :label "URL" :placeholder "Past page URL" :model [form :url]}]
    (if-let [url (:url @form)]
      [:div.full.fill
@@ -138,20 +141,44 @@
                 :placeholder "Optional title" :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
       [c/input {:type "text" :label "URL" :model [form :url] :placeholder "Image URL or search text"
                 :wrapper-class "col-sm-10" :label-class "col-sm-2"}]
-      [c/input {:type "radio" :label "Display" :model [form :display]
+      [c/input {:type "radio" :label "Display" :model [form :display] :name "display"
                 :wrapper-class "col-sm-10" :label-class "col-sm-2"
                 :items {"fit-full" "Fill" "clipped" "Clip"}}]]
      [:div {:on-double-click #(if-let [url (-> % .-target (.getAttribute "data-url"))]
                                 (swap! form assoc :url url))}
       [image-list @(r/track search-fn (:url @form))]]]))
 
+(defn apply-template [template data]
+  (js/console.log "formatting..." )
+  ((js/Handlebars.compile template) (clj->js data)))
+
+(defn fetch-data [url result]
+  (when-not (str/blank? url)
+    (GET url {:handler #(reset! result %)
+              :error-handler #(js/console.log "Error " %)})))
+
 (defn custom-form [form]
-  [:form.form
-   [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
-   [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"}]
-   [c/input {:type "text" :label "Refresh Interval (secs)" :model [form :refresh-interval]
-             :placeholder "60"}]
-   [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]])
+  (with-let [preview-on (atom false)
+             data (atom nil)
+             output (atom nil)]
+    [:div
+     [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
+     [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"
+               :on-blur #(fetch-data (-> % .-target .-value) data)}]
+     [c/input {:type "text" :label "Refresh Interval (secs)" :model [form :refresh-interval]
+               :placeholder "60"}]
+     [:ul.nav.nav-tabs
+      [:li {:class (when-not @preview-on "active") :on-click #(reset! preview-on false)}
+       [:a {:href "#"} "Template"]]
+      [:li {:class (when @preview-on "active") :on-click #(do
+                                                            (reset! output (apply-template (:template @form) @data))
+                                                            (reset! preview-on true))}
+       [:a {:href "#"} "Preview"]]]
+     [:div.tab-content
+      [:div.tab-pane {:class (when-not @preview-on  "active")}
+       [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]]
+      [:div.tab-pane {:class (when @preview-on "active")}
+       [:div {:dangerouslySetInnerHTML {:__html @output}}]]]]))
 
 (defn with-node [data node-fn]
   (r/create-class
@@ -178,9 +205,9 @@
              (js/console.log "error:" (clj->js error)))))))])
 
 (defn slides-form [form]
-  [:form.form
-   [:div.col-md-4
-    [c/input {:type "number" :label "interval" :model [form :interval]}]]])
+  [:div.row
+   [:div.col-md-2.col-sm-5
+    [c/input {:type "number" :label "Transition Interval (secs)" :model [form :interval]}]]])
 
 (defn rich-editor [attrs]
   (r/create-class
@@ -196,8 +223,15 @@
                                                         ["link" "image"]
                                                         [{:color []} {:background []}]
                                                         [{:align []}]])}})]
+        (.pasteHTML editor (:content attrs))
         (when-let [f (:on-change attrs)]
           (.on editor "text-change" #(f (-> editor .-root .-innerHTML))))))}))
 
 (defn html-form [form]
   [rich-editor (assoc @form :on-change #(swap! form assoc :content % ))])
+
+(defn publish-form [data]
+  [:div
+   [c/input {:type "text" :label "Name" :model [data :name]
+             :placeholder "unique name of your publishing" :required true}]
+   [:div (str (.-origin js/location) "/view/" (:name @data))]])

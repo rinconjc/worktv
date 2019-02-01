@@ -1,16 +1,43 @@
 (ns worktv.events
-  (:require [ajax.core :refer [GET POST PUT]]
+  (:require [accountant.core :as accountant]
+            [ajax.core :refer [GET POST PUT]]
             [cljs.core.async :refer-macros [go]]
             [clojure.core.match :refer-macros [match]]
             [re-frame.core :refer [dispatch reg-event-db reg-event-fx reg-fx]]
-            [secretary.core :as secretary]
+            [worktv.layout :refer [page-not-found]]
             [worktv.db :as db]
             [worktv.utils :refer [async-http]]))
 
 (defn init-events
-  "noop function to make a dummy require entry" [])
+  "noop function to make a dummy require entry" []
+  (js/console.log "loading events handlers"))
 
 (def log js/console.log)
+
+(defmulti load-content-data :content-type)
+(defmethod load-content-data :default [_])
+(defmethod load-content-data :custom [{:keys [url id template] :as pane}]
+  (GET url :handler #(dispatch
+                      [:assoc-in-db [:content-data id]
+                       ((js/Handlebars.compile template) (clj->js (or % {})))])
+       :response-format :json
+       :error-handler #(js/console.log "failed fetching " url ";" %)))
+
+(defmulti play-content :content-type)
+(defmethod play-content :default [_])
+(defmethod play-content :chart [pane])
+
+(defmethod play-content :custom [{:keys [refresh] :as pane}]
+  (let [timeout (js/setTimeout #(load-content-data pane) (* (Math/max 60 refresh) 1000))]
+    (dispatch [:assoc-in-db [:timers] conj timeout])))
+
+(defmethod play-content :slides [{:keys [id slides interval] :as pane}]
+  (let [advance-fn (fn[]
+                     (dispatch [:update-in-db [:current-project :layout id :active]
+                                #(-> % inc (rem (count slides)))]))
+        timeout (js/setInterval advance-fn (* interval 1000))]
+    (dispatch [:slide-active pane 0])
+    (dispatch [:update-in-db [:timers] conj timeout])))
 
 (reg-fx
  :xhr
@@ -28,7 +55,8 @@
 (reg-fx
  :route
  (fn [route]
-   (secretary/dispatch! route)))
+   (accountant/navigate! route)
+   (secretary.core/dispatch! route)))
 
 (reg-fx
  :dispatch-chan
@@ -44,6 +72,20 @@
                 (dispatch (into [(:error event) error] more)))
          (dispatch (into [event value] more)))))))
 
+(reg-fx
+ :play
+ (fn [panes]
+   (js/console.log "play fx:" panes)
+   (doseq [[_ pane] panes :when (= :content-pane (:type pane))]
+     (play-content pane))))
+
+(reg-fx
+ :stop-timers
+ (fn [timers]
+   (doseq [t timers]
+     (js/clearInterval t))
+   (dispatch [:assoc-in-db [:timers] []])))
+
 (reg-event-fx
  :init
  (fn [{:keys[db]} _]
@@ -55,6 +97,11 @@
  :assoc-in-db
  (fn [db [_ ks value]]
    (assoc-in db ks value)))
+
+(reg-event-db
+ :update-in-db
+ (fn [db [_ ks f value]]
+   (update-in db ks f value)))
 
 (reg-event-fx :route (fn [_ [_ route]] {:route route}))
 
@@ -138,10 +185,11 @@
 
 (reg-event-fx
  :publish-project
- (fn[_ [_ project-id path]]
-   {:xhr {:req [PUT (str "/projects/" path) {:params {:id project-id}}]
-          :on-success [:assoc-in-db [:alert] {:success (str "Project Published to " path)}]
-          :on-error [:assoc-in-db [:alert :error]]}}))
+ (fn [{:keys[db]} [_ data]]
+   (when-let [cur-proj (:current-project db)]
+     {:xhr {:req [POST (str "/api/publish/" (:id cur-proj) "/" (:name data))]
+            :on-success [:assoc-in-db [:alert] {:success (str "Project Published to " (:name data))}]
+            :on-error [:assoc-in-db [:alert :error]]}})))
 
 (reg-event-fx
  :design
@@ -153,8 +201,9 @@
 (reg-event-fx
  :update-pane
  (fn [{:keys [db]} [_ pane]]
-   {:db (update-in db [:current-project :layout] assoc (:id pane) pane)
-    :dispatch [:close-modal]}))
+   (let [path (or (:path pane) [(:id pane)])]
+     {:db (update-in db [:current-project :layout] assoc-in path (dissoc pane :path))
+      :dispatch [:close-modal]})))
 
 (reg-event-db
  :edit-pane
@@ -210,3 +259,43 @@
                              (dissoc pane-id (inc pane-id) (dec pane-id))))
            (dissoc :selected-pane)))
      (assoc db :alert {:error "Please select the pane to split first" :fade-after 5}))))
+
+(defn remove-nth [v n]
+  (vec (concat (subvec v 0 n) (subvec v (inc n)))))
+
+(reg-event-db
+ :delete-slide
+ (fn [db [_ pane index]]
+   (update-in db [:current-project :layout (:id pane)]
+              #(as-> (update pane :slides remove-nth index) pane
+                 (if (>= index (count (:slides pane)))
+                   (assoc pane :active (dec index)) pane)))))
+
+(reg-event-db
+ :slide-active
+ (fn [db [_ pane index]]
+   (-> db (assoc-in [:current-project :layout (:id pane) :active] index))))
+
+(reg-event-fx
+ :start-playing
+ (fn [{:keys [db]} [_]]
+   {:play (-> db :current-project :layout)}))
+
+(reg-event-fx
+ :stop-playing
+ (fn [{:keys [db]} [_]]
+   {:stop-timers (:timers db)}))
+
+(reg-event-fx
+ :show-publishing
+ (fn [{:keys [db]} [_ pub-name page]]
+   {:xhr {:req [GET (str "/api/published/" pub-name)]
+          :on-success [:show-project page]
+          :on-error [:current-page #'page-not-found]}}))
+
+(reg-event-fx
+ :show-project
+ (fn [{:keys[db]} [_ page proj-data]]
+   {:db (assoc db :current-project proj-data)
+    :dispatch-n [[:start-playing]
+                 [:current-page page]]}))

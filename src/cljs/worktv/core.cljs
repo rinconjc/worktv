@@ -1,4 +1,4 @@
-(ns worktv.core
+(ns ^:figwheel-hooks worktv.core
   (:require [accountant.core :as accountant]
             [commons-ui.core :as c]
             [re-frame.core :refer [dispatch dispatch-sync subscribe]]
@@ -6,9 +6,9 @@
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [worktv.events :refer [init-events]]
-            [worktv.layout :as l :refer [preview-page]]
+            [worktv.layout :as l :refer [preview-page progress-page]]
             [worktv.subs :refer [init-subs]]
-            [worktv.utils :refer [event-no-default]]))
+            [worktv.utils :refer [event-no-default handle-keys]]))
 
 (init-events)
 (init-subs)
@@ -27,22 +27,22 @@
         [:li [:a {:href "/login"} "Login"]])]]))
 
 (defn menu-bar [page-menu]
-  [:nav.navbar.navbar-default
+  [:nav.navbar.navbar-inverse
    [:div.container-fluid
     [:div.navbar-header
      [:button.navbar-toggle.collapsed {:data-toggle "collapse" :data-target "#navbar"
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "TeamTv7"]]
+     [:a.navbar-brand "TeamTVi"]]
     [page-menu]]])
 
 (defn home-page []
-  [:div [:h2 "Welcome to TeamTv7"]
+  [:div [:h2 "Welcome to TeamTVi"]
    [:div [:a {:href "#" :on-click #(dispatch [:design])} "Design a presentation"]]])
 
 (defn about-page []
-  [:div [:h2 "About TeamTv7"]
+  [:div [:h2 "About TeamTVi"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
@@ -64,10 +64,10 @@
 (defn current-page []
   (let [[page page-menu] (as-> @(subscribe [:current-page]) p
                            (if-not (vector? p) [(or p #'home-page) default-menu] p))]
-    (js/console.log "page?" (nil? page) " page-menu?" (nil? page-menu))
-    [:div.container-fluid.fill.full
-     [menu-bar page-menu]
-     [:div.row-fluid.fill.full
+    [:div.container-fluid.full
+     ;; {:on-key-down (handle-keys "esc" #(dispatch [:design]))}
+     (when page-menu [menu-bar page-menu])
+     [:div.row-fluid.full
       [page]]]))
 
 ;; -------------------------
@@ -95,12 +95,17 @@
   (dispatch [:current-page #'about-page]))
 
 (secretary/defroute "/preview" []
+  (js/console.log "previewing project")
+  (dispatch [:start-playing])
   (dispatch [:current-page [#'preview-page nil]]))
 
 (secretary/defroute "/show/:folder/:proj-id" [folder proj-id]
   (dispatch [:load-project proj-id])
   (dispatch [:current-page #'preview-page]))
 
+(secretary/defroute "/view/:pub-name" [pub-name]
+  (dispatch-sync [:current-page [#'progress-page nil]])
+  (dispatch [:show-publishing pub-name [#'preview-page nil]]))
 
 ;; -------------------------
 ;; Initialize app
@@ -110,7 +115,7 @@
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
   )
 
-(defn mount-root []
+(defn ^:after-load mount-root []
   (reagent/render [current-page] (.getElementById js/document "app")))
 
 (defn init! []
@@ -127,3 +132,4 @@
   (js/Handlebars.registerHelper
    "round" (fn [value opts]
              (-> value js/Number (.toFixed (-> opts .-hash .-decimals))))))
+(init!)

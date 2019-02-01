@@ -3,7 +3,8 @@
   (:require [re-frame.subs :refer [reg-sub]]
             [clojure.string :as str]))
 
-(defn init-subs "noop function to make dummy require in core" [])
+(defn init-subs "noop function to make dummy require in core" []
+  (js/console.log "loading subscriptions"))
 
 (reg-sub :current-page (fn [db _] (:current-page db)))
 
@@ -34,3 +35,5 @@
 (reg-sub :pane-dialog (fn [db _] (:pane-dialog db)))
 
 (reg-sub :selected-pane-id (fn [db _] (:selected-pane db)))
+
+(reg-sub :content-data (fn [db [id]] (-> db :content-data id)))

@@ -1,48 +1,20 @@
 (ns worktv.layout
   (:require [ajax.core :refer [GET]]
-            [cljs.core.async :refer [<! chan]]
-            [cljs.reader :refer [read-string]]
             [commons-ui.core :as c]
+            [re-frame.core :refer [dispatch subscribe]]
             [reagent.core :as r :refer [atom] :refer-macros [with-let]]
-            [reagent.session :as session]
             [secretary.core :as secretary]
-            [worktv.backend :as b]
-            [worktv.utils :as u]
-            [worktv.splitter :refer [splitter]]
-            [worktv.views
-             :as
-             v
-             :refer
-             [chart-form modal modal-dialog save-form search-project-form]]
-            [cljsjs.mustache]
-            [worktv.views :refer [web-page-form]]
-            [worktv.utils :refer [handle-keys]]
-            [worktv.views :refer [slides-form]]
-            [re-frame.core :refer [subscribe]]
-            [worktv.subs :refer [init-subs]]
-            [worktv.events :refer [init-events]]
-            [re-frame.core :refer [dispatch]]
             [worktv.db :as db]
-            [worktv.utils :refer [event-no-default]]
-            [worktv.views :refer [html-form]])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
-
-(init-subs)
-(init-events)
+            [worktv.splitter :refer [splitter]]
+            [worktv.utils :as u :refer [event-no-default handle-keys]]
+            [worktv.views :as v :refer [chart-form html-form modal-dialog save-form search-project-form
+              slides-form
+              web-page-form]]))
 
 (def ^:dynamic *edit-mode* true)
+(def ^:dynamic *current-project* nil)
 
-
-(def current-design (subscribe [:current-project]))
-;; (def current-design
-;;   (let [model (session/cursor [:current-design])]
-;;     (when-not @model
-;;       (session/put! :current-design blank-design))
-;;     model))
-
-;; (def selected-pane-id (atom nil))
-;; (def alert (atom nil))
-
+;; (def current-design (subscribe [:current-project]))
 
 (defn data-from [url refresh-rate]
   (let [data (atom nil)]
@@ -50,11 +22,7 @@
     data))
 
 (defn pane-by-id [id]
-  (-> @current-design :layout (get id)))
-
-(defn update-pane [pane]
-  (swap! current-design update :layout assoc (:id pane) pane)
-  pane)
+  (-> @*current-project* :layout (get id)))
 
 (defmulti content-editor (comp :content-type deref))
 
@@ -88,7 +56,6 @@
      :content (content-editor model)}))
 
 (defn show-editor [pane]
-  (js/console.log "showing editor for" (clj->js pane))
   (when (:content-type pane)
     (dispatch [:modal (editor-dialog pane)])))
 
@@ -100,15 +67,19 @@
 (defmulti pane-view :type)
 
 (defmethod pane-view :content-pane [pane]
-  [:div.fill.full
-   (if *edit-mode*
+  [:div.full
+   (when *edit-mode*
      {:on-click #(dispatch [:select-pane (:id pane)])
       :on-double-click (event-no-default #(show-editor pane))
       :on-drag-over #(.preventDefault %)
       :on-drag-enter #(-> % .-target .-classList (.add "drag-over") (and false))
       :on-drag-leave #(-> % .-target .-classList (.remove "drag-over") (and false))
       :on-drag-end #(-> % .-target .-classList (.remove "drag-over") (and false))
-      :on-drop #(show-editor (assoc pane :content-type (-> % .-dataTransfer (.getData "text/plain") keyword)))
+      :on-drop (event-no-default
+                #(do (show-editor
+                      (merge pane (db/default-content
+                                   (-> % .-dataTransfer (.getData "text/plain") keyword))))
+                     (-> % .-target .-classList (.remove "drag-over"))))
       :class (when (= (:id pane) @(subscribe [:selected-pane-id]))  "selected-pane")})
    (content-view pane)])
 
@@ -128,19 +99,13 @@
      [:iframe {:frame-border 0 :src url :style {:margin "5px" :width "100%" :height "100%"}} ]]
     [:video {:src url :class (if fill? "fill" "")}]))
 
-(defn data-view [url template refresh]
-  (with-let [data (atom nil)
-             load (fn []
-                    (GET url :handler #(reset! data %) :response-format :json
-                         :error-handler #(js/console.log "failed fetching " url ";" %)))
-             _ (load)]
-    (js/setTimeout load (* (Math/max 60 refresh) 1000))
+(defn data-view [id]
+  (with-let [data (subscribe [:content-data id])]
     [:div.fit {:style {:overflow "hidden"} :dangerouslySetInnerHTML
                ;; {:__html (js/Mustache.render template (clj->js (or @data #js {})))}
-               {:__html ((js/Handlebars.compile template) (clj->js (or @data #js {})))}}]))
+               {:__html @data}}]))
 
 (defmethod content-view :custom [{:keys [url template title refresh-interval]}]
-  (js/console.log "custom:" url)
   (if (and url template)
     [data-view url template refresh-interval]
     [:div.fit "Missing url and/or template"]))
@@ -151,18 +116,49 @@
 (defmethod content-view :default [pane]
   [:div.fill "blank content"])
 
-(defmethod content-view :slides [pane]
-  [:div.carousel-slide
+(defmethod content-view :slides [{:keys [active slides] :or {active 0} :as pane}]
+  [:div.carousel-slide.full
    [:ol.carousel-indicators
-    (for [i (range (:slide-count pane))]
-      ^{:key i}[:li {:data-slide-to i}])
-    [:li {:on-click #(js/console.log "add slide")} [:i.fa.fa-plus-circle]]]
-   (for [slide (:slides pane)] ^{:key (:id slide)}
-     [:div.carousel-inner
-      [:div (pane-view slide)]])])
+    (for [i (range (count (:slides pane)))]
+      ^{:key i}[:li {:data-slide-to i}])]
+   [:div.carousel-inner.full
+    (doall
+     (map-indexed
+      (fn[i slide] ^{:key i}
+        [:div.item.full (when (= active i) {:class "active"})
+         [:div.full (pane-view slide)]]) (:slides pane)))]
+
+   [:div {:style {:position "absolute" :bottom "10px" :width "100%" :text-align "center"}}
+    (when *edit-mode*
+      [:div.btn-group
+       (when (pos? active)
+         [:button.btn.btn-default {:on-click #(dispatch [:slide-active pane (dec active)])}
+          [:span.glyphicon.glyphicon-chevron-left]])
+       (when (< active (dec (count (:slides pane))))
+         [:button.btn.btn-default {:on-click #(dispatch [:slide-active pane (inc active)])}
+          [:span.glyphicon.glyphicon-chevron-right]])
+       [:button.btn.btn-default
+        {:on-click #(show-editor (assoc (get-in pane [:slides active])
+                                        :path [(:id pane) :slides active]))}
+        [:span.glyphicon.glyphicon-edit]]
+       [:div.btn-group
+        [:button.btn.btn-default.dropdown-toggle
+         {:data-toggle "dropdown" :aria-haspopup "true" :aria-expanded "false"}
+         [:span.glyphicon.glyphicon-plus] [:span.caret]]
+        [:ul.dropdown-menu
+         (for [[type {:keys [label icon]}] db/slide-content-types]
+           ^{:key type}
+           [:li [:a {:href "#" :title label
+                     :on-click #(show-editor
+                                 (assoc (db/default-content type)
+                                        :type :content-pane
+                                        :path [(:id pane) :slides (or (count (:slides pane)) 0)]))}
+                 [:i.fa.fa-fw {:class icon}] label]])]]
+       [:button.btn.btn-default {:on-click #(dispatch [:delete-slide pane active])}
+        [:span.glyphicon.glyphicon-minus]]])]])
 
 (defmethod content-view :html [pane]
-  [:div])
+  [:div {:dangerouslySetInnerHTML {:__html (:content pane)}}])
 
 (defn alert [attrs]
   (when-not (empty? (:text attrs))
@@ -170,18 +166,20 @@
      (:text attrs)]))
 
 (defn layout-editor []
-  [:div.fill.full
-   {:tabIndex 1
-    :on-key-down (handle-keys "ctrl+h" #(dispatch [:split-pane :horizontal])
-                              "ctrl+v" #(dispatch [:split-pane :vertical])
-                              "ctrl+k" #(dispatch [:delete-pane]))}
-   [alert @(subscribe [:alert])]
-   [modal-dialog]
-   (when @current-design
-     (pane-view (pane-by-id 1)))])
+  (with-let [current-project (subscribe [:current-project])]
+    (binding [*current-project* current-project]
+      [:div.fill.full
+       {:tabIndex 1
+        :on-key-down (handle-keys "alt+h" #(dispatch [:split-pane :horizontal])
+                                  "alt+v" #(dispatch [:split-pane :vertical])
+                                  "alt+k" #(dispatch [:delete-pane]))}
+       [modal-dialog]
+       [alert @(subscribe [:alert])]
+       (when @*current-project*
+         (pane-view (pane-by-id 1)))])))
 
 (defn handle-save-project []
-  (if (:id @current-design)
+  (if (:id @*current-project*)
     (dispatch [:save-project])
     (let [data (atom {})]
       (dispatch [:modal {:title "Save Design"
@@ -195,14 +193,10 @@
                      :content [search-project-form]}]))
 
 (defn handle-publish-project []
-  ;; show prompt for publishing path
-)
-;; (defn do-publish-project []
-;;   (go
-;;     (let [[result error] (<! (b/publish-project (.-uid (session/get :user)) @current-design))]
-;;       (if result
-;;         (secretary/dispatch! (str "/show/" (:folder @current-design) "/" (:id @current-design)))
-;;         (reset! alert [c/alert {:type "danger"} (str "Failed publishing:" error)])))))
+  (let [data (atom {})]
+    (dispatch [:modal {:title "Publish Project"
+                       :ok-fn #(dispatch [:publish-project @data])
+                       :content [v/publish-form data]}])))
 
 (defn design-menu []
   [:nav.navbar-collapse-collapse
@@ -224,11 +218,7 @@
             "Preview"]]
       [:li [:a {:href "#" :title "Publish Project"
                 :on-click handle-publish-project}
-            "Publish"]]
-      [:li [:a {:href "#" :title "Show Project"
-                :on-click #(do (secretary/dispatch! (str "/show/" (:name @current-design)))
-                               (.preventDefault %))}
-            "Show"]]]]
+            "Publish"]]]]
     [:li.dropdown
      [:a.dropdown-toggle {:data-toggle "dropdown" :role "button" :aria-haspopup true
                           :aria-expanded false} "Layout" [:span.caret]]
@@ -244,7 +234,7 @@
                           :aria-expanded false} "Widgets" [:span.caret]]
      [:ul.dropdown-menu
       (doall
-       (for [{:keys [type label icon]} db/content-types]
+       (for [[type {:keys [label icon]}] db/content-types]
          ^{:key type}
          [:li [:a {:href "#" :draggable true
                    :on-drag-start #(-> % .-dataTransfer (.setData "text/plain" (name type)))
@@ -258,9 +248,20 @@
      [layout-editor]]]])
 
 (defn preview-page []
-  (binding [*edit-mode* false]
-    (if @current-design
-      [:div.preview
-       {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
-       [:div.fill.full
-        (pane-view (pane-by-id 1))]])))
+  (binding [*edit-mode* false
+            *current-project* (subscribe [:current-project])]
+    (when @*current-project*
+      (with-let []
+        [:div.preview
+         {:on-key-press #(if (= 27 (u/visit (.-keyCode %) js/console.log)) (js/console.log "back!"))}
+         [:div.fill.full
+          (pane-view (pane-by-id 1))]]
+        (finally (dispatch [:stop-playing]))))))
+
+(defn page-not-found []
+  [:div [:h2 "Oops! Page not found!"]])
+
+(defn progress-page []
+  [:div
+   [:h1.text-center
+    [:i.fa.fa-spinner.fa-spin.fa-3x]]])
