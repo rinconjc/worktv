@@ -184,7 +184,7 @@
 
 (defn rich-editor [attrs]
   (r/create-class
-   {:reagent-render (fn [attrs] [:div])
+   {:reagent-render (fn [attrs] [:div {:dangerouslySetInnerHTML {:__html (:content attrs)}} ])
     :component-did-mount
     (fn [c]
       (let [editor (js/Quill. (r/dom-node c) #js
@@ -196,7 +196,8 @@
                                                         ["link" "image"]
                                                         [{:color []} {:background []}]
                                                         [{:align []}]])}})]
-        (some->> (:on-change attrs) (.on editor "text-change"))))}))
+        (when-let [f (:on-change attrs)]
+          (.on editor "text-change" #(f (-> editor .-root .-innerHTML))))))}))
 
 (defn html-form [form]
   [rich-editor (assoc @form :on-change #(swap! form assoc :content % ))])
