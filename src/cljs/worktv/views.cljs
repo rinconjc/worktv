@@ -1,12 +1,14 @@
 (ns worktv.views
-  (:require [cljs.core.async :refer [<!]]
+  (:require [ajax.core :refer [GET]]
+            [cljs.core.async :refer [<!]]
             [clojure.string :as str]
             [commons-ui.core :as c]
-            [reagent.core :refer [atom] :as r :refer-macros [with-let]]
-            [worktv.utils :as u]
+            [re-frame.core :refer [dispatch subscribe]]
+            [reagent.core :as r :refer [atom] :refer-macros [with-let]]
             [worktv.backend :as b]
-            [re-frame.core :refer [subscribe dispatch]]
-            [ajax.core :refer [GET]])
+            [worktv.utils :as u]
+            [sablono.core :as h :refer-macros [html]]
+            [cljsjs.codemirror])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -148,8 +150,20 @@
                                 (swap! form assoc :url url))}
       [image-list @(r/track search-fn (:url @form))]]]))
 
+(defn code-mirror [instance config value]
+  (r/create-class
+   {:reagent-render
+    (fn[instance config value]
+      (if @instance
+        (.setValue @instance value))
+      [:textarea.mousetrap {:rows 10 :style {:width "100%" :height "100%"} :default-value ""}])
+    :component-did-mount
+    (fn[c]
+      (let [cm (.fromTextArea js/CodeMirror (r/dom-node c) (clj->js config))]
+        (.setTimeout js/window #(.focus cm) 1000)
+        (reset! instance cm)))}))
+
 (defn apply-template [template data]
-  (js/console.log "formatting..." )
   ((js/Handlebars.compile template) (clj->js data)))
 
 (defn fetch-data [url result]
@@ -160,7 +174,8 @@
 (defn custom-form [form]
   (with-let [preview-on (atom false)
              data (atom nil)
-             output (atom nil)]
+             output (atom nil)
+             cm (atom nil)]
     [:div
      [c/input {:type "text" :label "Title" :model [form :title] :placeholder "Optional title"}]
      [c/input {:type "text" :label "Data URL" :model [form :url] :placeholder "URL of data"
@@ -170,15 +185,21 @@
      [:ul.nav.nav-tabs
       [:li {:class (when-not @preview-on "active") :on-click #(reset! preview-on false)}
        [:a {:href "#"} "Template"]]
-      [:li {:class (when @preview-on "active") :on-click #(do
-                                                            (reset! output (apply-template (:template @form) @data))
-                                                            (reset! preview-on true))}
+      [:li {:class (when @preview-on "active")
+            :on-click #(do
+                         (reset! output (apply-template (.getValue @cm) @data))
+                         (reset! preview-on true))}
        [:a {:href "#"} "Preview"]]]
      [:div.tab-content
       [:div.tab-pane {:class (when-not @preview-on  "active")}
-       [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]]
+       [:div.pane-body {:style {:padding "0px" :overflow "hidden" :height "320px"}}
+        [code-mirror cm {:mode "text/html" :tabindex 2 :autofocus true :theme "solarized"}
+         (or (:template @form) "")]]
+       ;; [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]
+       ]
       [:div.tab-pane {:class (when @preview-on "active")}
-       [:div {:dangerouslySetInnerHTML {:__html @output}}]]]]))
+       [:div {:dangerouslySetInnerHTML {:__html @output}}]
+       ]]]))
 
 (defn with-node [data node-fn]
   (r/create-class
