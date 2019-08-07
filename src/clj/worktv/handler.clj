@@ -56,6 +56,7 @@
    (include-css (if (env :dev) "/css/splitter.css" "/css/splitter.min.css"))
    (include-css "https://cdn.quilljs.com/1.3.6/quill.snow.css")
    (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css")
+   (include-css "css/assets.css")
    ;; (include-css "/css/bootstrap.min.css")
    (include-css "https://use.fontawesome.com/releases/v5.0.13/css/all.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
@@ -74,7 +75,8 @@
    (head)
    [:body
     mount-target
-    (include-js (if (env :dev) "/cljs-out/dev-main.js"  "/js/app.js"))]))
+    (include-js (if (env :dev) "/cljs-out/dev-main.js"  "/js/app.js"))
+    (include-js "js/assets.js")]))
 
 (defn wrap-csrf-cookie [handler]
   (fn [request]
