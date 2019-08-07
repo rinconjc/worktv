@@ -52,6 +52,8 @@
 
   :main worktv.server
 
+  :jvm-opts ["-Dconfig=.local.conf.edn"]
+
   :clean-targets ^{:protect false}
   [:target-path
    [:cljsbuild :builds :app :compiler :output-dir]
