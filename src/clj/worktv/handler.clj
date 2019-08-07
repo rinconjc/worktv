@@ -142,8 +142,8 @@
            (POST "/login" []
                  (fn[req]
                    (let [{:keys [email expiry] :as body} (:body-params req)
-                         base-url (str (-> req :scheme name) "://"
-                                       (-> req :headers (get "host")))
+                         base-url (env :base-url (str (-> req :scheme) "://"
+                                                      (-> req :headers (get "host"))))
                          token (db/login-request body)
                          link (str base-url "/api/verify?token=" token)]
                      (log/info "login link:" link)
