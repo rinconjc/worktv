@@ -5,6 +5,9 @@
             [ring.middleware.reload :refer [wrap-reload]]
             [worktv.handler :refer [app]]))
 
- (defn -main [& args]
-   (let [port (Integer/parseInt (or (env :port) "3003"))]
-     (run-jetty (wrap-reload app) {:port port :join? false})))
+(defn start-server []
+  (let [port (Integer/parseInt (or (env :port) "3003"))]
+    (run-jetty (wrap-reload app) {:port port :join? false})))
+
+(defn -main [& args]
+  (start-server))

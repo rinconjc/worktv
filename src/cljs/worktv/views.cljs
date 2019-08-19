@@ -7,8 +7,7 @@
             [reagent.core :as r :refer [atom] :refer-macros [with-let]]
             [worktv.backend :as b]
             [worktv.utils :as u]
-            [sablono.core :as h :refer-macros [html]]
-            [cljsjs.codemirror])
+            [sablono.core :as h :refer-macros [html]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -150,18 +149,18 @@
                                 (swap! form assoc :url url))}
       [image-list @(r/track search-fn (:url @form))]]]))
 
-(defn code-mirror [instance config value]
-  (r/create-class
-   {:reagent-render
-    (fn[instance config value]
-      (if @instance
-        (.setValue @instance value))
-      [:textarea.mousetrap {:rows 10 :style {:width "100%" :height "100%"} :default-value ""}])
-    :component-did-mount
-    (fn[c]
-      (let [cm (.fromTextArea js/CodeMirror (r/dom-node c) (clj->js config))]
-        (.setTimeout js/window #(.focus cm) 1000)
-        (reset! instance cm)))}))
+;; (defn code-mirror [instance config value]
+;;   (r/create-class
+;;    {:reagent-render
+;;     (fn[instance config value]
+;;       (if @instance
+;;         (.setValue @instance value))
+;;       [:textarea.mousetrap {:rows 10 :style {:width "100%" :height "100%"} :default-value ""}])
+;;     :component-did-mount
+;;     (fn[c]
+;;       (let [cm (.fromTextArea js/CodeMirror (r/dom-node c) (clj->js config))]
+;;         (.setTimeout js/window #(.focus cm) 1000)
+;;         (reset! instance cm)))}))
 
 (defn apply-template [template data]
   ((js/Handlebars.compile template) (clj->js data)))
@@ -193,8 +192,9 @@
      [:div.tab-content
       [:div.tab-pane {:class (when-not @preview-on  "active")}
        [:div.pane-body {:style {:padding "0px" :overflow "hidden" :height "320px"}}
-        [code-mirror cm {:mode "text/html" :tabindex 2 :autofocus true :theme "solarized"}
-         (or (:template @form) "")]]
+        ;; [code-mirror cm {:mode "text/html" :tabindex 2 :autofocus true :theme "solarized"}
+        ;;  (or (:template @form) "")]
+        ]
        ;; [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]
        ]
       [:div.tab-pane {:class (when @preview-on "active")}
