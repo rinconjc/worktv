@@ -1,5 +1,6 @@
 ^{:watch-dirs ["test" "src/cljs" "src/cljc"]
   :css-dirs ["resources/public/css"]
   :auto-testing true
-  :ring-handler worktv.handler/app}
+  ;; :ring-handler worktv.handler/app
+  }
 {:main worktv.core}

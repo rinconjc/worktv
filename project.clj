@@ -98,7 +98,7 @@
                         :optimizations :none
                         :pretty-print  true}}}}
 
-  :profiles {:dev {:repl-options {:init-ns worktv.repl
+  :profiles {:dev {:repl-options {:init (start-server)
                                   :nrepl-middleware [cider.piggieback/wrap-cljs-repl]
                                   }
                    :dependencies [[cider/piggieback "0.3.10"]
