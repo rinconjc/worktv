@@ -34,15 +34,15 @@
                                        :aria-expanded false :aria-controls "navbar"}
       [:span.sr-only "Toggle navigation"]
       [:span.icon-bar] [:span.icon-bar] [:span.icon-bar]]
-     [:a.navbar-brand "TeamTVi"]]
+     [:a.navbar-brand "Tilyfy"]]
     [page-menu]]])
 
 (defn home-page []
-  [:div [:h2 "Welcome to TeamTVi"]
+  [:div [:h2 "Welcome to Tilyfy"]
    [:div [:a {:href "#" :on-click #(dispatch [:design])} "Design a presentation"]]])
 
 (defn about-page []
-  [:div [:h2 "About TeamTVi"]
+  [:div [:h2 "About Tilyfy"]
    [:div [:a {:href "/"} "go to the home page"]]])
 
 (defn login-confirm-page []
@@ -109,11 +109,6 @@
 
 ;; -------------------------
 ;; Initialize app
-(defn on-js-reload []
-  ;; optionally touch your app-state to force rerendering depending on
-  ;; your application
-  ;; (swap! app-state update-in [:__figwheel_counter] inc)
-  )
 
 (defn ^:after-load mount-root []
   (reagent/render [current-page] (.getElementById js/document "app")))

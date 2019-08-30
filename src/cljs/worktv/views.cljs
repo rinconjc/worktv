@@ -7,7 +7,8 @@
             [reagent.core :as r :refer [atom] :refer-macros [with-let]]
             [worktv.backend :as b]
             [worktv.utils :as u]
-            [sablono.core :as h :refer-macros [html]])
+            [sablono.core :as h :refer-macros [html]]
+            [oops.core :refer [oset! oget ocall]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (doto (-> js/google .-charts)
@@ -162,6 +163,34 @@
 ;;         (.setTimeout js/window #(.focus cm) 1000)
 ;;         (reset! instance cm)))}))
 
+(defn bind-editor [editor content config]
+  (when editor
+    (when (and @content (not= @content (ocall editor "getValue")))
+      (ocall editor "setValue" @content -1))
+    (ocall editor "on" "change" #(reset! content (ocall editor "getValue")))))
+
+(defn code-editor [content config]
+  (r/create-class
+   {:reagent-render
+    (fn[content config]
+      [:div.editor])
+    :component-will-update
+    (fn[c [_ content config]]
+      (bind-editor (oget c "?editor") content config))
+    :component-did-mount
+    (fn[c]
+      (try
+        (let [editor (js/ace.edit (r/dom-node c)
+                                  (-> {:showLineNumbers false} (merge config)
+                                      (dissoc :theme) (clj->js config)))]
+          ;; (-> editor (ocall "setTheme" (str "ace/theme/" (or (:theme config) "idle_fingers"))))
+          (-> editor (oget "session")
+              (ocall "setMode" (str "ace/mode/" (:mode config "html"))))
+          (oset! c "!editor" editor)
+          (bind-editor editor content config))
+        (catch js/Error e
+          (println "Error:" e))))}))
+
 (defn apply-template [template data]
   ((js/Handlebars.compile template) (clj->js data)))
 
@@ -186,20 +215,16 @@
        [:a {:href "#"} "Template"]]
       [:li {:class (when @preview-on "active")
             :on-click #(do
-                         (reset! output (apply-template (.getValue @cm) @data))
+                         (reset! output (apply-template (:template @form) @data))
                          (reset! preview-on true))}
        [:a {:href "#"} "Preview"]]]
      [:div.tab-content
       [:div.tab-pane {:class (when-not @preview-on  "active")}
        [:div.pane-body {:style {:padding "0px" :overflow "hidden" :height "320px"}}
-        ;; [code-mirror cm {:mode "text/html" :tabindex 2 :autofocus true :theme "solarized"}
-        ;;  (or (:template @form) "")]
-        ]
-       ;; [c/input {:type "textarea" :label "HTML template" :model [form :template] :placeholder "mustache template" :rows 10}]
-       ]
+        [code-editor (r/cursor form [:template]) {:mode "html"}]]]
       [:div.tab-pane {:class (when @preview-on "active")}
-       [:div {:dangerouslySetInnerHTML {:__html @output}}]
-       ]]]))
+       [:div.pane-body {:style {:padding "0px" :overflow "scroll" :height "320px"}
+                        :dangerouslySetInnerHTML {:__html @output}}]]]]))
 
 (defn with-node [data node-fn]
   (r/create-class

@@ -3,7 +3,6 @@
             [worktv.utils :as u]
             [ajax.core :refer [GET]]
             [clojure.string :as str]
-            [cljsjs.firebase]
             [reagent.session :as session]
             [ajax.core :refer [POST]]
             [secretary.core :as secreatary]
