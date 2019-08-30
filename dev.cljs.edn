@@ -2,5 +2,5 @@
   :css-dirs ["resources/public/css"]
   :auto-testing true
   ;; :ring-handler worktv.handler/app
-  }
+  :open-url "http://localhost:3003"}
 {:main worktv.core}

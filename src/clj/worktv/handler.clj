@@ -56,7 +56,7 @@
    (include-css (if (env :dev) "/css/splitter.css" "/css/splitter.min.css"))
    (include-css "https://cdn.quilljs.com/1.3.6/quill.snow.css")
    (include-css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css")
-   (include-css "css/assets.css")
+   ;; (include-css "css/assets.css")
    ;; (include-css "/css/bootstrap.min.css")
    (include-css "https://use.fontawesome.com/releases/v5.0.13/css/all.css")
    (include-js "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js")
@@ -67,6 +67,7 @@
    ;; (include-js "https://www.gstatic.com/firebasejs/3.6.2/firebase-database.js")
    (include-js "https://www.gstatic.com/charts/loader.js")
    (include-js "https://cdn.quilljs.com/1.3.6/quill.min.js")
+   (include-js "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.5/ace.js")
    ])
 
 
@@ -75,8 +76,7 @@
    (head)
    [:body
     mount-target
-    (include-js (if (env :dev) "/cljs-out/dev-main.js"  "/js/app.js"))
-    (include-js "js/assets.js")]))
+    (include-js "/cljs-out/dev-main.js")]))
 
 (defn wrap-csrf-cookie [handler]
   (fn [request]
@@ -142,8 +142,8 @@
            (POST "/login" []
                  (fn[req]
                    (let [{:keys [email expiry] :as body} (:body-params req)
-                         base-url (str (-> req :scheme name) "://"
-                                       (-> req :headers (get "host")))
+                         base-url (env :base-url (str (-> req :scheme name) "://"
+                                                      (-> req :headers (get "host"))))
                          token (db/login-request body)
                          link (str base-url "/api/verify?token=" token)]
                      (log/info "login link:" link)

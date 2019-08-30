@@ -38,7 +38,7 @@
                  [prismatic/plumbing "0.5.5"]
                  [ring-middleware-format "0.7.2"]
                  [sablono "0.8.4"]
-                 [cljsjs/codemirror "5.40.2-1"]]
+                 [binaryage/oops "0.7.0"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]
@@ -46,14 +46,13 @@
              :exclusions [org.clojure/clojure]]
             [lein-cljsasset "0.2.0"]]
 
-  :ring {:handler worktv.handler/app
-         :uberwar-name "worktv.war"}
-
   :min-lein-version "2.7.1"
 
   :uberjar-name "worktv.jar"
 
   :main worktv.server
+
+  :jvm-opts ["-Dconfig=.local.conf.edn"]
 
   :clean-targets ^{:protect false}
   [:target-path
@@ -68,51 +67,17 @@
             "fig:min"   ["run" "-m" "figwheel.main" "-O" "advanced" "-bo" "dev"]
             "fig:test"  ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" test.test-runner]}
 
-  :minify-assets
-  {:assets
-   {"resources/public/css/site.min.css" "resources/public/css/site.css"
-    "resources/public/css/splitter.min.css" "resources/public/css/splitter.css"}}
-
-  :cljsasset {:css ["cljsjs/codemirror/production/codemirror.min.css"
-                    "cljsjs/codemirror/common/theme/solarized.css"]
-              :js  ["cljsjs/codemirror/common/mode/htmlmixed.inc.js"
-                    "cljsjs/codemirror/common/addon/hint/html-hint.inc.js"]}
-  :cljsbuild
-  {:builds {:min
-            {:source-paths ["src/cljs" "src/cljc" "env/prod/cljs"]
-             :compiler
-             {:output-to "target/cljsbuild/public/js/app.js"
-              :output-dir "target/uberjar"
-              :optimizations :advanced
-              :pretty-print  false
-              :externs ["externs/externs.js"]}}
-            :app
-            {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
-             :figwheel true
-             :compiler {
-                        :main "worktv.dev"
-                        :asset-path "/js/out"
-                        :output-to "target/cljsbuild/public/js/app.js"
-                        :output-dir "target/cljsbuild/public/js/out"
-                        :source-map true
-                        :optimizations :none
-                        :pretty-print  true}}}}
-
-  :profiles {:dev {:repl-options {:init (start-server)
-                                  :nrepl-middleware [cider.piggieback/wrap-cljs-repl]
-                                  }
+  :profiles {:dev {:repl-options {:init (start-server)}
                    :dependencies [[cider/piggieback "0.3.10"]
                                   [prone "1.6.1"]
-                                  [com.bhauman/figwheel-main "0.1.9"]
-                                  [com.bhauman/rebel-readline-cljs "0.1.4"]
-                                  ]
+                                  [com.bhauman/figwheel-main "0.2.0"]
+                                  [com.bhauman/rebel-readline-cljs "0.1.4"]]
 
                    :source-paths ["env/dev/clj"]
                    :env {:dev true}}
 
-             :uberjar {:hooks [minify-assets.plugin/hooks]
-                       :source-paths ["env/prod/clj"]
-                       :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+             :uberjar {:source-paths ["env/prod/clj"]
+                       :prep-tasks ["compile" ["fig:min"]]
                        :env {:production true}
                        :aot :all
                        :omit-source true}})
